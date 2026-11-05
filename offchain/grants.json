@@ -1,0 +1,12 @@
+{
+  "description": "DAO-approved grant table, committed BEFORE evidence is audited. Amounts and recipients come only from here.",
+  "grants": {
+    "nidhi-001": {
+      "repo": "Uniswap/v4-template",
+      "pr": 90,
+      "rfp": "rfp/nidhi-001.md",
+      "recipient": "0x9f755b63405c90b9008b2c6162b1d5bac6c6b9c7",
+      "amountInWei": "100000000000000"
+    }
+  }
+}

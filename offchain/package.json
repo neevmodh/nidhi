@@ -1,0 +1,18 @@
+{
+  "name": "nidhi-offchain",
+  "private": true,
+  "type": "module",
+  "description": "Nidhi AI auditor: deterministic evidence rubric + advisory LLM review -> signed EIP-712 Attestation",
+  "scripts": {
+    "audit": "node src/audit.ts",
+    "verify": "node src/verify.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.5.0",
+    "viem": "^2.57.16",
+    "zod": "^4.6.7"
+  }
+}

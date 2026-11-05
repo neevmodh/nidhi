@@ -1,0 +1,11 @@
+{
+  "admin": "0x410b6334F7804Ed55e8a1E00D84f6A4a216dB36E",
+  "approver": "0xcb83DbB16c6C5700B59c94184E1eFe21bAFb972D",
+  "auditor": "0x031aD51C31298Cc79AAf0e225c93F1CB5924495e",
+  "committedAt": 1793888640,
+  "label": "nidhi-dao",
+  "name": "nidhi-dao.eth",
+  "node": "0x981289860aefbbfd497b29cc56a474d1f199d5a8fae9ad25afb579df1016f420",
+  "resolver": "0x0D919208f68a4156E7580B9101171fa72dECaBbF",
+  "secret": "0xb82c7eafba51499f4537180042cd976dc4ed23be05627e59dd0ace1b9cdf06d7"
+}

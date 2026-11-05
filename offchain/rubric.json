@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "description": "Deterministic acceptance rules. The pass/fail decision is made here, never by the LLM.",
+  "rules": {
+    "requireMerged": true,
+    "minApprovals": 1,
+    "requireNoFailedChecks": true,
+    "requiredPathGlobs": ["script/**"],
+    "maxFilesChanged": 60
+  },
+  "llm": {
+    "role": "advisory-veto-only",
+    "note": "The LLM may veto (verdict=inconsistent) but cannot pass a deliverable that fails a rule, and never sets an amount or recipient."
+  }
+}
