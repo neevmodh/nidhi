@@ -25,7 +25,7 @@ import {DestinationReceiver} from "../../src/DestinationReceiver.sol";
 import {ENSv2Authority} from "../../src/ENSv2Authority.sol";
 import {Mandate, Attestation} from "../../src/libraries/Mandate.sol";
 import {MockEAC} from "../mocks/MockEAC.sol";
-import {MockENSv2Registry} from "../mocks/MockENSv2Registry.sol";
+import {MockENSv2Registry, MockGranteeRegistry} from "../mocks/MockENSv2Registry.sol";
 import {IENSv2Registry} from "../../src/ENSv2Authority.sol";
 
 /// @notice Full local deployment: real v4 PoolManager + CCIP local simulator + ENSv2Authority over a mock EAC.
@@ -35,7 +35,11 @@ abstract contract NidhiBase is Test, Deployers {
     uint256 constant ROLE_SET_TEXT = 1 << 4;
     uint256 constant APPROVER_RES = uint256(keccak256("nidhi.role.approver"));
     uint256 constant AUDITOR_RES = uint256(keccak256("nidhi.role.auditor"));
+    uint256 constant GUARDIAN_RES = uint256(keccak256("nidhi.role.guardian"));
     string constant DAO_LABEL = "nidhi-dao";
+    string constant GRANTEE_LABEL = "alice";
+    uint256 constant COIN_TYPE = 0x80000000 | 84532; // ENSIP-11, Base Sepolia
+    uint256 constant DAILY_CAP = 1 ether;
 
     // actors
     uint256 internal approverPk = 0xA11CE;
@@ -56,6 +60,8 @@ abstract contract NidhiBase is Test, Deployers {
 
     MockEAC internal eac;
     MockENSv2Registry internal ensRegistry;
+    MockGranteeRegistry internal grantees;
+    address internal guardian = makeAddr("guardian");
     ENSv2Authority internal authority;
     NidhiSwapRouter internal nidhiRouter;
     NidhiDispatcher internal dispatcher;
@@ -86,9 +92,14 @@ abstract contract NidhiBase is Test, Deployers {
         eac = new MockEAC(); // the DAO's PermissionedResolver
         ensRegistry = new MockENSv2Registry();
         ensRegistry.set(DAO_LABEL, address(eac), uint64(block.timestamp + 365 days));
-        authority = new ENSv2Authority(IENSv2Registry(address(ensRegistry)), DAO_LABEL);
+        authority = new ENSv2Authority(IENSv2Registry(address(ensRegistry)), DAO_LABEL, COIN_TYPE);
         eac.grant(APPROVER_RES, ROLE_SET_TEXT, approver);
         eac.grant(AUDITOR_RES, ROLE_SET_TEXT, auditor);
+        eac.grant(GUARDIAN_RES, ROLE_SET_TEXT, guardian);
+        // grantee subname alice.nidhi-dao.eth -> recipient on the payout chain
+        grantees = new MockGranteeRegistry(DAO_LABEL);
+        ensRegistry.setSubregistry(DAO_LABEL, address(grantees));
+        grantees.setGrantee(GRANTEE_LABEL, recipient);
 
         // --- Nidhi
         nidhiRouter = new NidhiSwapRouter(manager);
@@ -100,7 +111,9 @@ abstract contract NidhiBase is Test, Deployers {
                 ^ (0x4444 << 144)
         );
         deployCodeTo(
-            "NidhiHook.sol:NidhiHook", abi.encode(manager, authority, dispatcher, address(nidhiRouter), daoOwner), hookAddr
+            "NidhiHook.sol:NidhiHook",
+            abi.encode(manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP),
+            hookAddr
         );
         hook = NidhiHook(hookAddr);
 
@@ -111,7 +124,9 @@ abstract contract NidhiBase is Test, Deployers {
         vm.stopPrank();
 
         // --- pool: WETH / CCIP-BnM, liquidity from an LP (this contract)
-        for (uint256 i; i < 20; ++i) bnm.drip(address(this));
+        for (uint256 i; i < 20; ++i) {
+            bnm.drip(address(this));
+        }
         weth.mint(address(this), 100 ether);
         bnm.approve(address(modifyLiquidityRouter), type(uint256).max);
         weth.approve(address(modifyLiquidityRouter), type(uint256).max);
@@ -156,7 +171,8 @@ abstract contract NidhiBase is Test, Deployers {
             destReceiver: address(receiver),
             evidenceHash: keccak256(abi.encode("evidence", grantId)),
             deadline: uint64(block.timestamp + 1 hours),
-            poolId: PoolId.unwrap(key.toId())
+            poolId: PoolId.unwrap(key.toId()),
+            recipientLabelHash: keccak256(bytes(GRANTEE_LABEL))
         });
     }
 
@@ -186,7 +202,8 @@ abstract contract NidhiBase is Test, Deployers {
             approverSig: _sign(apPk, hook.mandateDigest(m)),
             attestation: a,
             auditor: vm.addr(auPk),
-            auditorSig: _sign(auPk, hook.attestationDigest(a))
+            auditorSig: _sign(auPk, hook.attestationDigest(a)),
+            recipientLabel: GRANTEE_LABEL
         });
         return abi.encode(g);
     }

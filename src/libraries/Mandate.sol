@@ -16,6 +16,7 @@ struct Mandate {
     bytes32 evidenceHash;
     uint64 deadline;
     bytes32 poolId;
+    bytes32 recipientLabelHash; // keccak256(label) of the grantee's ENS subname: <label>.<dao>.eth
 }
 
 struct Attestation {
@@ -28,7 +29,7 @@ struct Attestation {
 
 library MandateLib {
     bytes32 internal constant MANDATE_TYPEHASH = keccak256(
-        "Mandate(bytes32 grantId,address executor,address recipient,address tokenIn,address tokenOut,uint128 amountIn,uint128 minOut,uint128 maxOut,uint64 destChainSelector,address destReceiver,bytes32 evidenceHash,uint64 deadline,bytes32 poolId)"
+        "Mandate(bytes32 grantId,address executor,address recipient,address tokenIn,address tokenOut,uint128 amountIn,uint128 minOut,uint128 maxOut,uint64 destChainSelector,address destReceiver,bytes32 evidenceHash,uint64 deadline,bytes32 poolId,bytes32 recipientLabelHash)"
     );
 
     bytes32 internal constant ATTESTATION_TYPEHASH = keccak256(

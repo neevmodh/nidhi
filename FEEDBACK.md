@@ -14,7 +14,11 @@ This is feedback from building `NidhiHook`, a v4 hook using `beforeSwap`, `after
 3. **`sender` in hook callbacks is the router, not the user.** The docs mention it, but it is the #1 footgun when gating swaps. *Suggestion:* a first-class "gated hook" example showing the trusted-router `msgSender()` pattern alongside signature-carrying `hookData`.
 4. **Sign conventions for return deltas.** "Positive means owed to the hook" for the `afterSwap` `int128`, and how it maps onto the specified versus unspecified currency for exact-in versus exact-out swaps, took source reading (`Hooks.sol`) to confirm. *Suggestion:* a table in the docs: exact-in/exact-out × zeroForOne → which currency is unspecified, with the sign of the hook delta.
 5. **Quoting through a gating hook is impossible.** The `Quoter` simulates the swap, so a hook that reverts on unauthorized swaps also reverts the quote. We compute an exact quote off-chain with `SqrtPriceMath` from `StateLibrary` state instead (`script/05_Demo.s.sol`). *Suggestion:* document this, or let hooks detect quote simulation.
-6. **Docs moved to developers.uniswap.org** with redirects. The deployments page asks readers to confirm addresses on the explorer, which we did, and it was helpful. A machine-readable deployments JSON would help scripts.
+6. **`PoolModifyLiquidityTest` positions can be removed by anyone.** Many tutorials and scripts seed liquidity through the
+   test router. The position is owned by the router contract, so **any address** can call it with a negative delta and
+   withdraw the liquidity; we proved this against our own live pool (`test/fork/DrainCheck.t.sol`). *Suggestion:* a loud
+   warning in the template/docs, and a PositionManager seeding example (Permit2 + `MINT_POSITION` + `SETTLE_PAIR`) as the default.
+7. **Docs moved to developers.uniswap.org** with redirects. The deployments page asks readers to confirm addresses on the explorer, which we did, and it was helpful. A machine-readable deployments JSON would help scripts.
 
 ## Testing note
 EIP-7702 is live: several well-known test keys on Sepolia now have delegation code. OpenZeppelin `SignatureChecker` routes any address with code to ERC-1271 only, which rejects valid ECDSA signatures from 7702 accounts. That's not a Uniswap issue, but any hook doing signature-gated swaps will hit it.

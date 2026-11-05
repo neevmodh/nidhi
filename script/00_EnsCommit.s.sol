@@ -5,7 +5,6 @@ import {console2} from "forge-std/Script.sol";
 import {NidhiScript} from "./NidhiScript.sol";
 import {IVerifiableFactory, IPermissionedResolver, IETHRegistrar, IMockUSDC} from "./ens/IENSv2.sol";
 
-
 /// @notice Step 0 (Sepolia): create the DAO's ENSv2 PermissionedResolver, delegate the two Nidhi roles via
 ///         Enhanced Access Control, and commit to registering "<ENS_LABEL>.eth".
 ///   The deployer receives ONLY ROLE_SET_TEXT_ADMIN: it can delegate/revoke Nidhi roles but cannot itself act
@@ -33,17 +32,16 @@ contract EnsCommit is NidhiScript {
 
         vm.startBroadcast(pk);
         IMockUSDC(ENS_MOCK_USDC).mint(deployer, base + premium);
-        address resolver = IVerifiableFactory(ENS_VERIFIABLE_FACTORY).deployProxy(
-            ENS_RESOLVER_IMPL,
-            uint256(keccak256(abi.encode("nidhi", label, deployer))),
-            abi.encodeCall(IPermissionedResolver.initialize, (grants, new bytes[](0)))
-        );
-        IPermissionedResolver(resolver).grantSetterRoles(
-            abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.approver", "")), approver
-        );
-        IPermissionedResolver(resolver).grantSetterRoles(
-            abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.auditor", "")), auditor
-        );
+        address resolver = IVerifiableFactory(ENS_VERIFIABLE_FACTORY)
+            .deployProxy(
+                ENS_RESOLVER_IMPL,
+                uint256(keccak256(abi.encode("nidhi", label, deployer))),
+                abi.encodeCall(IPermissionedResolver.initialize, (grants, new bytes[](0)))
+            );
+        IPermissionedResolver(resolver)
+            .grantSetterRoles(abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.approver", "")), approver);
+        IPermissionedResolver(resolver)
+            .grantSetterRoles(abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.auditor", "")), auditor);
         registrar.commit(registrar.makeCommitment(label, deployer, secret, address(0), resolver, DURATION, bytes32(0)));
         vm.stopBroadcast();
 

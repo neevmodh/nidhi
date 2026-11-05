@@ -45,12 +45,20 @@ contract NidhiHook is BaseHook, EIP712 {
         Attestation attestation;
         address auditor;
         bytes auditorSig;
+        string recipientLabel; // grantee subname label; keccak must equal mandate.recipientLabelHash
     }
 
     IGrantAuthority public immutable authority;
     INidhiDispatcher public immutable dispatcher;
     address public immutable trustedRouter;
     address public immutable owner;
+    /// @notice Rolling safety cap: max total `amountIn` the hook will authorize per UTC day.
+    uint256 public immutable maxAmountInPerDay;
+
+    /// @notice ENS guardian kill-switch state.
+    bool public paused;
+    /// @notice UTC day index => amountIn already authorized that day.
+    mapping(uint256 => uint256) public spentPerDay;
 
     /// @notice The single pool this hook serves. Set once.
     PoolId public poolId;
@@ -66,6 +74,8 @@ contract NidhiHook is BaseHook, EIP712 {
     event PoolBound(PoolId indexed poolId);
     event GrantAuthorized(bytes32 indexed grantId, address indexed approver, address indexed auditor, address executor);
     event GrantCaptured(bytes32 indexed grantId, address indexed tokenOut, uint256 amountOut, bytes32 messageId);
+    event GrantCancelled(bytes32 indexed grantId, address indexed approver);
+    event PausedSet(bool paused, address indexed guardian);
 
     error ZeroAddress();
     error NotOwner();
@@ -84,13 +94,17 @@ contract NidhiHook is BaseHook, EIP712 {
     error NotAuthorized(bytes32 role, address account);
     error NoActiveGrant();
     error OutputOutOfBounds(uint256 out, uint256 minOut, uint256 maxOut);
+    error Paused();
+    error CapExceeded(uint256 requested, uint256 remaining);
+    error RecipientMismatch(address resolved, address mandated);
 
     constructor(
         IPoolManager poolManager_,
         IGrantAuthority authority_,
         INidhiDispatcher dispatcher_,
         address trustedRouter_,
-        address owner_
+        address owner_,
+        uint256 maxAmountInPerDay_
     ) BaseHook(poolManager_) EIP712("Nidhi", "1") {
         if (
             address(authority_) == address(0) || address(dispatcher_) == address(0) || trustedRouter_ == address(0)
@@ -100,6 +114,7 @@ contract NidhiHook is BaseHook, EIP712 {
         dispatcher = dispatcher_;
         trustedRouter = trustedRouter_;
         owner = owner_;
+        maxAmountInPerDay = maxAmountInPerDay_;
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -131,6 +146,31 @@ contract NidhiHook is BaseHook, EIP712 {
         emit PoolBound(poolId);
     }
 
+    // ------------------------------------------------------------------ ENS-gated controls
+
+    /// @notice Guardian kill-switch. Any account holding the ENS role "nidhi.role.guardian" may pause or unpause.
+    function setPaused(bool paused_) external {
+        bytes32 role = authority.GUARDIAN();
+        if (!authority.isAuthorized(role, msg.sender)) revert NotAuthorized(role, msg.sender);
+        paused = paused_;
+        emit PausedSet(paused_, msg.sender);
+    }
+
+    /// @notice Kill a signed-but-unexecuted mandate. Any ENS APPROVER may cancel any unused grant.
+    function cancelGrant(bytes32 grantId) external {
+        bytes32 role = authority.APPROVER();
+        if (!authority.isAuthorized(role, msg.sender)) revert NotAuthorized(role, msg.sender);
+        if (grantUsed[grantId]) revert GrantAlreadyUsed(grantId);
+        grantUsed[grantId] = true;
+        emit GrantCancelled(grantId, msg.sender);
+    }
+
+    /// @notice amountIn still authorizable today.
+    function remainingToday() public view returns (uint256) {
+        uint256 spent = spentPerDay[block.timestamp / 1 days];
+        return spent >= maxAmountInPerDay ? 0 : maxAmountInPerDay - spent;
+    }
+
     // ------------------------------------------------------------------ EIP-712 views (for off-chain signers)
 
     function mandateDigest(Mandate calldata m) public view returns (bytes32) {
@@ -152,6 +192,7 @@ contract NidhiHook is BaseHook, EIP712 {
         override
         returns (bytes4, BeforeSwapDelta, uint24)
     {
+        if (paused) revert Paused();
         if (!poolSet || PoolId.unwrap(key.toId()) != PoolId.unwrap(poolId)) revert WrongPool();
         if (sender != trustedRouter) revert UntrustedRouter(sender);
 
@@ -165,7 +206,12 @@ contract NidhiHook is BaseHook, EIP712 {
 
         if (grantUsed[m.grantId]) revert GrantAlreadyUsed(m.grantId);
         _checkSignatures(g);
+        _checkRecipient(g);
+        uint256 remaining = remainingToday();
+        if (m.amountIn > remaining) revert CapExceeded(m.amountIn, remaining);
+
         grantUsed[m.grantId] = true;
+        spentPerDay[block.timestamp / 1 days] += m.amountIn;
 
         _setActiveGrant(m.grantId);
         emit GrantAuthorized(m.grantId, g.approver, g.auditor, executor);
@@ -211,6 +257,17 @@ contract NidhiHook is BaseHook, EIP712 {
     function _setActiveGrant(bytes32 g) private {
         assembly ("memory-safe") {
             tstore(ACTIVE_GRANT_SLOT, g)
+        }
+    }
+
+    /// @dev "Pay a name, not an address": the mandated recipient must be exactly what the grantee's ENS subname
+    ///      resolves to on the payout chain right now. Re-pointing the subname redirects future grants; an expired
+    ///      or unset subname blocks them.
+    function _checkRecipient(GrantAuth memory g) private view {
+        if (keccak256(bytes(g.recipientLabel)) != g.mandate.recipientLabelHash) revert InvalidMandate();
+        address resolved = authority.resolveGrantee(g.recipientLabel);
+        if (resolved == address(0) || resolved != g.mandate.recipient) {
+            revert RecipientMismatch(resolved, g.mandate.recipient);
         }
     }
 

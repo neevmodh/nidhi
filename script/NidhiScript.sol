@@ -17,13 +17,23 @@ abstract contract NidhiScript is Script {
     address constant BASE_CCIP_ROUTER = 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93;
     address constant BASE_BNM = 0x88A2d74F47a237a62e7A51cdDa67270CE381555e;
     uint64 constant BASE_SELECTOR = 10344971235874465080;
+    uint256 constant BASE_SEPOLIA_COIN_TYPE = 0x80000000 | 84532; // ENSIP-11
 
     // ---------------------------------------------------------------- ENSv2 on Sepolia (docs.ens.domains/learn/deployments)
     address constant ENS_RESOLVER_IMPL = 0x115eb53F0c60696633855F90b138178Fb40b2b2C;
     address constant ENS_VERIFIABLE_FACTORY = 0xDa70306C98E97eCe36F997a21368e53298572991;
     address constant ENS_ETH_REGISTRAR = 0xf633e7FC17e2bbE0D0965D18ec1821dcB754a3d3;
     address constant ENS_ETH_REGISTRY = 0xD4eBcbBdF463C9c45784603Db0dDD499BC44A8B4;
+    address constant ENS_USER_REGISTRY_IMPL = 0x9BD8a88719068D09ecee662f36C0E3856708366a;
     address constant ENS_MOCK_USDC = 0x240b0316Df57887DBBE58b586508b19e633a14aa;
+
+    // ---------------------------------------------------------------- Uniswap v4 periphery (Sepolia)
+    address constant SEP_POSITION_MANAGER = 0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4;
+    address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+
+    // ---------------------------------------------------------------- Chainlink Automation (Base Sepolia, v2.3)
+    address constant BASE_AUTOMATION_REGISTRAR = 0xf28D56F3A707E25B71Ce529a21AF388751E1CF2A;
+    address constant BASE_LINK = 0xE4aB69C077896252FAFBD49EFD26B5D171A32410;
 
     // ---------------------------------------------------------------- misc
     address constant CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
@@ -35,6 +45,7 @@ abstract contract NidhiScript is Script {
     string constant ENS_JSON = "deployments/sepolia-ens.json";
     string constant SEP_JSON = "deployments/sepolia.json";
     string constant BASE_JSON = "deployments/base-sepolia.json";
+    string constant SUBNAMES_JSON = "deployments/sepolia-subnames.json";
 
     function _deployerPk() internal view returns (uint256) {
         return vm.envUint("PRIVATE_KEY");
@@ -53,6 +64,14 @@ abstract contract NidhiScript is Script {
     function _namehash(string memory label) internal pure returns (bytes32) {
         bytes32 ethNode = keccak256(abi.encodePacked(bytes32(0), keccak256("eth")));
         return keccak256(abi.encodePacked(ethNode, keccak256(bytes(label))));
+    }
+
+    /// DNS wire format of "<sub>.<label>.eth"
+    function _dnsSubname(string memory sub, string memory label) internal pure returns (bytes memory) {
+        return
+            abi.encodePacked(
+                uint8(bytes(sub).length), sub, uint8(bytes(label).length), label, uint8(3), "eth", uint8(0)
+            );
     }
 
     function _readAddress(string memory path, string memory key) internal view returns (address) {

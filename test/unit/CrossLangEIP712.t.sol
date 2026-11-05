@@ -40,7 +40,8 @@ contract CrossLangEIP712Test is NidhiBase {
             approverSig: _sign(approverPk, hook.mandateDigest(m)),
             attestation: a,
             auditor: auditor,
-            auditorSig: VIEM_SIG
+            auditorSig: VIEM_SIG,
+            recipientLabel: GRANTEE_LABEL
         });
         _swap(m, abi.encode(g));
         assertEq(uint8(dispatcher.statusOf(a.grantId)), uint8(NidhiDispatcher.Status.SETTLED));

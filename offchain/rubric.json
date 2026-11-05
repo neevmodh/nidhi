@@ -5,11 +5,12 @@
     "requireMerged": true,
     "minApprovals": 1,
     "requireNoFailedChecks": true,
-    "requiredPathGlobs": ["script/**"],
+    "requiredPathGlobs": [],
     "maxFilesChanged": 60
   },
   "llm": {
     "role": "advisory-veto-only",
     "note": "The LLM may veto (verdict=inconsistent) but cannot pass a deliverable that fails a rule, and never sets an amount or recipient."
-  }
+  },
+  "note": "Path requirements are per grant (grants.json: requiredPathGlobs), committed by the DAO before the audit."
 }

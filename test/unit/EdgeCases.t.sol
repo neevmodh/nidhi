@@ -24,7 +24,8 @@ contract EdgeCasesTest is NidhiBase {
     function test_nativeFeesOnBothLanes() public {
         CCIPLocalRouter(address(ccipRouter)).setFee(0.01 ether);
         NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), address(0), chainSelector, daoOwner);
-        DestinationReceiver r = new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), address(0), daoOwner);
+        DestinationReceiver r =
+            new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), address(0), daoOwner);
         vm.startPrank(daoOwner);
         d.setHook(address(this)); // this test plays the hook
         d.setDestReceiver(address(r));
@@ -150,7 +151,9 @@ contract EdgeCasesTest is NidhiBase {
 
     function test_revert_ackWrongMessageId() public {
         (bytes32 id, NidhiDispatcher.Grant memory g) = _settledGrant();
-        vm.expectRevert(abi.encodeWithSelector(NidhiDispatcher.MessageIdMismatch.selector, g.messageId, bytes32(uint256(1))));
+        vm.expectRevert(
+            abi.encodeWithSelector(NidhiDispatcher.MessageIdMismatch.selector, g.messageId, bytes32(uint256(1)))
+        );
         _ack(AckLib.encodeAck(id, bytes32(uint256(1)), g.amount, AckLib.PAID), new Client.EVMTokenAmount[](0));
     }
 
@@ -220,7 +223,8 @@ contract EdgeCasesTest is NidhiBase {
         assertEq(receiver.ackGasLimit(), 250_000);
 
         // fee token can never be the bridged grant token
-        DestinationReceiver r2 = new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), address(bnm), daoOwner);
+        DestinationReceiver r2 =
+            new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), address(bnm), daoOwner);
         vm.prank(daoOwner);
         vm.expectRevert(DestinationReceiver.UnexpectedTokens.selector);
         r2.withdrawFees(daoOwner, 1);

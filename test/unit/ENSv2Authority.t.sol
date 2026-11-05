@@ -20,7 +20,7 @@ contract ENSv2AuthorityTest is Test {
         eac = new MockEAC();
         registry = new MockENSv2Registry();
         registry.set("nidhi-dao", address(eac), uint64(block.timestamp + 365 days));
-        auth = new ENSv2Authority(IENSv2Registry(address(registry)), "nidhi-dao");
+        auth = new ENSv2Authority(IENSv2Registry(address(registry)), "nidhi-dao", 0x80000000 | 84532);
     }
 
     function test_resourceMatchesPermissionedResolverLib() public view {
@@ -79,8 +79,8 @@ contract ENSv2AuthorityTest is Test {
 
     function test_constructorRejectsBadConfig() public {
         vm.expectRevert(ENSv2Authority.BadConfig.selector);
-        new ENSv2Authority(IENSv2Registry(address(0)), "nidhi-dao");
+        new ENSv2Authority(IENSv2Registry(address(0)), "nidhi-dao", 1);
         vm.expectRevert(ENSv2Authority.BadConfig.selector);
-        new ENSv2Authority(IENSv2Registry(address(registry)), "");
+        new ENSv2Authority(IENSv2Registry(address(registry)), "", 1);
     }
 }

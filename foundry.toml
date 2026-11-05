@@ -16,6 +16,7 @@ fs_permissions = [
 
 [fuzz]
 runs = 512
+seed = "0x6e69646869" # deterministic fuzzing so `forge snapshot --check` is reproducible in CI
 
 [invariant]
 runs = 128

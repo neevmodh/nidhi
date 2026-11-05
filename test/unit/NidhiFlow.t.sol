@@ -88,7 +88,8 @@ contract NidhiFlowTest is NidhiBase {
             approverSig: _sign(approverPk, hook.mandateDigest(m)), // owner key signs on behalf of the wallet
             attestation: a,
             auditor: auditor,
-            auditorSig: _sign(auditorPk, hook.attestationDigest(a))
+            auditorSig: _sign(auditorPk, hook.attestationDigest(a)),
+            recipientLabel: GRANTEE_LABEL
         });
         _swap(m, abi.encode(g));
         assertEq(uint8(dispatcher.statusOf(m.grantId)), uint8(NidhiDispatcher.Status.SETTLED));
@@ -105,9 +106,12 @@ contract NidhiFlowTest is NidhiBase {
             approverSig: _sign(0xBAD, hook.mandateDigest(m)),
             attestation: a,
             auditor: auditor,
-            auditorSig: _sign(auditorPk, hook.attestationDigest(a))
+            auditorSig: _sign(auditorPk, hook.attestationDigest(a)),
+            recipientLabel: GRANTEE_LABEL
         });
-        _expectHookRevert(IHooks.beforeSwap.selector, abi.encodeWithSelector(NidhiHook.BadSignature.selector, address(safe)));
+        _expectHookRevert(
+            IHooks.beforeSwap.selector, abi.encodeWithSelector(NidhiHook.BadSignature.selector, address(safe))
+        );
         _swap(m, abi.encode(g));
     }
 

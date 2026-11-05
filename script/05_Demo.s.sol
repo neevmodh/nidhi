@@ -18,6 +18,10 @@ import {NidhiSwapRouter} from "../src/NidhiSwapRouter.sol";
 import {NidhiDispatcher} from "../src/NidhiDispatcher.sol";
 import {Mandate, Attestation} from "../src/libraries/Mandate.sol";
 
+interface IGranteeResolver {
+    function resolveGrantee(string calldata label) external view returns (address);
+}
+
 interface IWETH9Demo {
     function deposit() external payable;
     function approve(address, uint256) external returns (bool);
@@ -47,21 +51,21 @@ contract Demo is NidhiScript {
         uint256 pk = _deployerPk();
         address executor = vm.addr(pk);
 
-        string memory sj = vm.readFile(SEP_JSON);
-        hook = NidhiHook(vm.parseJsonAddress(sj, ".hook"));
-        router = NidhiSwapRouter(vm.parseJsonAddress(sj, ".router"));
-        poolId = vm.parseJsonBytes32(sj, ".poolId");
-        NidhiDispatcher dispatcher = NidhiDispatcher(payable(vm.parseJsonAddress(sj, ".dispatcher")));
-        key = PoolKey(Currency.wrap(SEP_WETH), Currency.wrap(SEP_BNM), 3000, 60, IHooks(address(hook)));
+        NidhiDispatcher dispatcher = _init();
 
-        (Attestation memory a, address recipient, uint128 amountIn) = _loadGrant(executor);
+        (Attestation memory a, address recipient, uint128 amountIn) = _loadGrant();
         Mandate memory m = _mandate(a, executor, recipient, amountIn);
         bytes memory hookData = _hookData(m, a);
 
         vm.startBroadcast(pk);
         if (IWETH9Demo(SEP_WETH).balanceOf(executor) < amountIn) IWETH9Demo(SEP_WETH).deposit{value: amountIn}();
         IWETH9Demo(SEP_WETH).approve(address(router), amountIn);
-        router.swap(key, SwapParams(true, -int256(uint256(amountIn)), TickMath.MIN_SQRT_PRICE + 1), hookData, block.timestamp + 300);
+        router.swap(
+            key,
+            SwapParams(true, -int256(uint256(amountIn)), TickMath.MIN_SQRT_PRICE + 1),
+            hookData,
+            block.timestamp + 300
+        );
         vm.stopBroadcast();
 
         NidhiDispatcher.Grant memory g = dispatcher.getGrant(m.grantId);
@@ -75,13 +79,18 @@ contract Demo is NidhiScript {
         console2.log("Ledger: cast call <dispatcher> 'statusOf(bytes32)(uint8)' <grantId>   (1 DISPATCHED, 3 SETTLED)");
     }
 
+    function _init() internal returns (NidhiDispatcher dispatcher) {
+        string memory sj = vm.readFile(SEP_JSON);
+        hook = NidhiHook(vm.parseJsonAddress(sj, ".hook"));
+        router = NidhiSwapRouter(vm.parseJsonAddress(sj, ".router"));
+        poolId = vm.parseJsonBytes32(sj, ".poolId");
+        dispatcher = NidhiDispatcher(payable(vm.parseJsonAddress(sj, ".dispatcher")));
+        key = PoolKey(Currency.wrap(SEP_WETH), Currency.wrap(SEP_BNM), 3000, 60, IHooks(address(hook)));
+    }
+
     // ---------------------------------------------------------------- grant inputs
 
-    function _loadGrant(address executor)
-        internal
-        view
-        returns (Attestation memory a, address recipient, uint128 amountIn)
-    {
+    function _loadGrant() internal view returns (Attestation memory a, address recipient, uint128 amountIn) {
         if (vm.exists(ATTESTATION_JSON)) {
             string memory aj = vm.readFile(ATTESTATION_JSON);
             a = Attestation({
@@ -91,7 +100,7 @@ contract Demo is NidhiScript {
                 rubricHash: vm.parseJsonBytes32(aj, ".rubricHash"),
                 issuedAt: uint64(vm.parseJsonUint(aj, ".issuedAt"))
             });
-            recipient = vm.parseJsonAddress(aj, ".recipient");
+            recipient = _resolveGrantee();
             amountIn = uint128(vm.parseUint(vm.parseJsonString(aj, ".amountInWei")));
         } else {
             bytes32 grantId = keccak256(abi.encode("nidhi-demo", block.timestamp));
@@ -102,7 +111,7 @@ contract Demo is NidhiScript {
                 rubricHash: keccak256("demo-rubric"),
                 issuedAt: uint64(block.timestamp)
             });
-            recipient = vm.envOr("GRANT_RECIPIENT", executor);
+            recipient = _resolveGrantee();
             amountIn = uint128(vm.envOr("AMOUNT_IN_WEI", uint256(0.0001 ether)));
         }
     }
@@ -112,7 +121,17 @@ contract Demo is NidhiScript {
         view
         returns (Mandate memory)
     {
-        uint256 quote = _quote(amountIn);
+        return _mandateAt(a, executor, recipient, amountIn, 0);
+    }
+
+    /// Mandate for a grant that executes after `priorIn` of input has already been swapped in the same batch:
+    /// its band is the exact marginal quote quote(prior + amount) - quote(prior).
+    function _mandateAt(Attestation memory a, address executor, address recipient, uint128 amountIn, uint128 priorIn)
+        internal
+        view
+        returns (Mandate memory)
+    {
+        uint256 quote = _quote(priorIn + amountIn) - (priorIn == 0 ? 0 : _quote(priorIn));
         return Mandate({
             grantId: a.grantId,
             executor: executor,
@@ -126,7 +145,8 @@ contract Demo is NidhiScript {
             destReceiver: _readAddress(BASE_JSON, ".receiver"),
             evidenceHash: a.evidenceHash,
             deadline: uint64(block.timestamp + 1 hours),
-            poolId: poolId
+            poolId: poolId,
+            recipientLabelHash: keccak256(bytes(_granteeLabel()))
         });
     }
 
@@ -138,6 +158,20 @@ contract Demo is NidhiScript {
         uint256 inLessFee = uint256(amountIn) * (1e6 - 3000) / 1e6;
         uint160 sqrtNext = SqrtPriceMath.getNextSqrtPriceFromInput(sqrtP, liquidity, inLessFee, true);
         return SqrtPriceMath.getAmount1Delta(sqrtNext, sqrtP, liquidity, false);
+    }
+
+    /// "Pay a name, not an address": the recipient is whatever the grantee subname resolves to on Base right now.
+    function _resolveGrantee() internal view returns (address a) {
+        a = IGranteeResolver(vm.parseJsonAddress(vm.readFile(SEP_JSON), ".authority")).resolveGrantee(_granteeLabel());
+        require(a != address(0), "grantee subname does not resolve - run 06_EnsSubnames");
+    }
+
+    function _granteeLabel() internal view returns (string memory) {
+        if (vm.exists(ATTESTATION_JSON)) {
+            string memory aj = vm.readFile(ATTESTATION_JSON);
+            if (vm.keyExistsJson(aj, ".granteeLabel")) return vm.parseJsonString(aj, ".granteeLabel");
+        }
+        return vm.envOr("GRANTEE_LABEL", string("alice"));
     }
 
     // ---------------------------------------------------------------- signatures
@@ -152,7 +186,8 @@ contract Demo is NidhiScript {
                 approverSig: _sig(apk, hook.mandateDigest(m)),
                 attestation: a,
                 auditor: auditor,
-                auditorSig: auditorSig
+                auditorSig: auditorSig,
+                recipientLabel: _granteeLabel()
             })
         );
     }
@@ -161,7 +196,7 @@ contract Demo is NidhiScript {
     function _auditorSignature(Attestation memory a) internal view returns (address, bytes memory) {
         if (vm.exists(ATTESTATION_JSON)) {
             string memory aj = vm.readFile(ATTESTATION_JSON);
-            if (vm.keyExistsJson(aj, ".auditorSig")) {
+            if (vm.keyExistsJson(aj, ".auditorSig") && vm.parseJsonBytes32(aj, ".grantId") == a.grantId) {
                 return (vm.parseJsonAddress(aj, ".auditor"), vm.parseJsonBytes(aj, ".auditorSig"));
             }
         }

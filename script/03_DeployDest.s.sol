@@ -17,7 +17,8 @@ contract DeployDest is NidhiScript {
         uint256 ackReserve = vm.envOr("ACK_FEE_RESERVE", uint256(0.003 ether));
 
         vm.startBroadcast(pk);
-        DestinationReceiver receiver = new DestinationReceiver(BASE_CCIP_ROUTER, SEP_SELECTOR, BASE_BNM, address(0), deployer);
+        DestinationReceiver receiver =
+            new DestinationReceiver(BASE_CCIP_ROUTER, SEP_SELECTOR, BASE_BNM, address(0), deployer);
         receiver.setSourceDispatcher(dispatcher);
         (bool ok,) = address(receiver).call{value: ackReserve}("");
         require(ok, "fund ACK reserve");

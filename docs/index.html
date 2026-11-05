@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nidhi Grant Explorer</title>
+<meta name="description" content="Live view of Nidhi grants: every address discovered from nidhi-dao.eth (ENSv2, Sepolia)." />
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+    --accent: #3a5bd9; --ok: #1f8a4c; --warn: #b7791f; --bad: #c0392b; --chip: #eef1fb;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121315; --panel: #1b1c1f; --ink: #ececea; --muted: #9a9a95; --line: #2c2d31;
+      --accent: #8aa2ff; --ok: #4cc98a; --warn: #e0b04c; --bad: #ef7b6b; --chip: #23263a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121315; --panel: #1b1c1f; --ink: #ececea; --muted: #9a9a95; --line: #2c2d31;
+    --accent: #8aa2ff; --ok: #4cc98a; --warn: #e0b04c; --bad: #ef7b6b; --chip: #23263a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  .stat { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; font-size: 13px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--chip); font-size: 12px; font-weight: 600; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.mono { font-family: var(--mono); font-size: 12px; }
+  .tablewrap { overflow-x: auto; }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .flow b { color: var(--ink); font-weight: 600; }
+  #status { font-size: 13px; color: var(--muted); }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  footer { margin-top: 24px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Nidhi Grant Explorer</h1>
+      <div class="sub">Mandate-gated cross-chain grant payouts. Uniswap v4 hook, Chainlink CCIP, ENSv2.</div>
+    </div>
+    <div><span id="status">Resolving nidhi-dao.eth…</span> <button id="refresh" type="button">Refresh</button></div>
+  </header>
+
+  <div class="card" style="margin-bottom:14px">
+    <h2>How a grant moves</h2>
+    <div class="flow">
+      <b>AI auditor attests</b> → <b>approver signs mandate</b> → <b>hook checks ENS roles + recipient subname</b> →
+      <b>swap</b> → <b>output captured</b> → <b>CCIP to Base</b> → <b>grantee paid</b> → <b>ACK</b> → <b>SETTLED</b>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h2>Grants</h2><div class="stat" id="nGrants">–</div><div class="sub" id="nSettled">&nbsp;</div></div>
+    <div class="card"><h2>Hook</h2><div class="stat" id="paused">–</div><div class="sub" id="cap">&nbsp;</div></div>
+    <div class="card"><h2>Self-healing queue (Base)</h2><div class="stat" id="queue">–</div><div class="sub">grants awaiting an ACK retry or a held payout</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Discovered from nidhi-dao.eth</h2>
+      <dl class="kv" id="contracts"><dt>…</dt><dd></dd></dl>
+    </div>
+    <div class="card">
+      <h2>ENS identities</h2>
+      <dl class="kv" id="identities"><dt>…</dt><dd></dd></dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Grant ledger</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Grant</th><th>Amount (CCIP-BnM)</th><th>Recipient</th><th>Source ledger</th><th>Destination</th><th>CCIP</th></tr></thead>
+        <tbody id="grants"><tr><td colspan="6" class="sub">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>
+    Nothing on this page is hard-coded except the ENSv2 registry and the name <code>nidhi-dao.eth</code>. Contract
+    addresses come from the name's text records, grantee addresses from its subnames, and grant history from on-chain events.
+    Source: <a href="https://github.com/neevmodh/nidhi">github.com/neevmodh/nidhi</a>
+  </footer>
+</main>
+
+<script type="module">
+import {
+  createPublicClient, http, fallback, parseAbi, parseAbiItem, encodeFunctionData, decodeAbiParameters,
+  keccak256, toBytes, toHex, formatUnits
+} from "https://cdn.jsdelivr.net/npm/viem@2.21.0/+esm";
+import { sepolia, baseSepolia } from "https://cdn.jsdelivr.net/npm/viem@2.21.0/chains/+esm";
+
+const ENS_REGISTRY = "0xD4eBcbBdF463C9c45784603Db0dDD499BC44A8B4"; // ENSv2 ETHRegistry (Sepolia)
+const DAO = "nidhi-dao";
+const CHUNK = 9000n;
+
+const sep = createPublicClient({ chain: sepolia, transport: fallback([
+  http("https://ethereum-sepolia-rpc.publicnode.com"), http("https://sepolia.gateway.tenderly.co")]) });
+const base = createPublicClient({ chain: baseSepolia, transport: http("https://sepolia.base.org") });
+
+const enc = new TextEncoder();
+const dns = (...labels) => toHex(new Uint8Array([...labels.flatMap(l => [l.length, ...enc.encode(l)]), 0]));
+const short = (a) => a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "–";
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const eth = (a) => `<a href="https://sepolia.etherscan.io/address/${a}" target="_blank" rel="noopener">${short(a)}</a>`;
+const bas = (a) => `<a href="https://sepolia.basescan.org/address/${a}" target="_blank" rel="noopener">${short(a)}</a>`;
+
+const registryAbi = parseAbi([
+  "function getResolver(string label) view returns (address)",
+  "function getSubregistry(string label) view returns (address)",
+]);
+const resolverAbi = parseAbi(["function resolve(bytes name, bytes data) view returns (bytes)"]);
+const textAbi = parseAbi(["function text(bytes32 node, string key) view returns (string)"]);
+const addrAbi = parseAbi(["function addr(bytes32 node, uint256 coinType) view returns (bytes)"]);
+
+async function readText(resolver, name, key) {
+  const data = encodeFunctionData({ abi: textAbi, functionName: "text", args: [`0x${"0".repeat(64)}`, key] });
+  const out = await sep.readContract({ address: resolver, abi: resolverAbi, functionName: "resolve", args: [name, data] });
+  return decodeAbiParameters([{ type: "string" }], out)[0];
+}
+async function readAddr(resolver, name, coin) {
+  const data = encodeFunctionData({ abi: addrAbi, functionName: "addr", args: [`0x${"0".repeat(64)}`, coin] });
+  const out = await sep.readContract({ address: resolver, abi: resolverAbi, functionName: "resolve", args: [name, data] });
+  const b = decodeAbiParameters([{ type: "bytes" }], out)[0];
+  return b.length === 42 ? b : null;
+}
+
+// Scan [fromBlock, latest] in chunks. fromBlock comes from the ENS record "nidhi.contract.deployBlock".
+async function logs(client, address, event, fromBlock, latest) {
+  const out = [];
+  for (let start = fromBlock; start <= latest; start += CHUNK) {
+    const end = start + CHUNK - 1n < latest ? start + CHUNK - 1n : latest;
+    out.push(...await client.getLogs({ address, event, fromBlock: start, toBlock: end }));
+  }
+  return out;
+}
+
+const STATUS = ["NONE", "DISPATCHED", "HELD", "SETTLED"];
+const OUTCOME = ["not arrived", "PAID", "HELD", "RECOVERED"];
+
+async function load() {
+  const status = document.getElementById("status");
+  status.textContent = "Resolving nidhi-dao.eth…";
+  const daoName = dns(DAO, "eth");
+  const daoResolver = await sep.readContract({ address: ENS_REGISTRY, abi: registryAbi, functionName: "getResolver", args: [DAO] });
+  const keys = ["hook", "dispatcher", "router", "authority", "receiver", "poolId", "deployBlock"];
+  const c = {};
+  for (const k of keys) c[k] = await readText(daoResolver, daoName, `nidhi.contract.${k}`);
+
+  document.getElementById("contracts").innerHTML = [
+    ["DAO resolver", eth(daoResolver)], ["NidhiHook", eth(c.hook)], ["Dispatcher", eth(c.dispatcher)],
+    ["Router", eth(c.router)], ["ENSv2Authority", eth(c.authority)], ["Receiver (Base)", bas(c.receiver)],
+    ["Pool id", `<span title="${esc(c.poolId)}">${esc(short(c.poolId))}</span>`],
+    ["Deployed at block", esc(c.deployBlock || "–")],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+
+  // ENS identities: grantee + auditor subnames
+  const sub = await sep.readContract({ address: ENS_REGISTRY, abi: registryAbi, functionName: "getSubregistry", args: [DAO] });
+  const ident = [["Subregistry", sub === "0x0000000000000000000000000000000000000000" ? "none" : eth(sub)]];
+  if (sub !== "0x0000000000000000000000000000000000000000") {
+    const gres = await sep.readContract({ address: sub, abi: registryAbi, functionName: "getResolver", args: ["alice"] });
+    const alice = await readAddr(gres, dns("alice", DAO, "eth"), BigInt(0x80000000 | 84532));
+    const auditor = await readAddr(gres, dns("auditor", DAO, "eth"), 60n);
+    let att = "";
+    try { att = await readText(gres, dns("auditor", DAO, "eth"), "nidhi.attestation"); } catch {}
+    ident.push(["alice.nidhi-dao.eth", alice ? `${bas(alice)} <span class="sub">(Base)</span>` : "unset"]);
+    ident.push(["auditor.nidhi-dao.eth", auditor ? eth(auditor) : "unset"]);
+    ident.push(["Latest attestation", att ? `<span title="${esc(att)}">${esc(att.length > 34 ? att.slice(0, 34) + "…" : att)}</span>` : "<span class='sub'>none published</span>"]);
+  }
+  document.getElementById("identities").innerHTML = ident.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+
+  // Hook state
+  const hookAbi = parseAbi(["function paused() view returns (bool)", "function remainingToday() view returns (uint256)", "function maxAmountInPerDay() view returns (uint256)"]);
+  const [paused, remaining, cap] = await Promise.all([
+    sep.readContract({ address: c.hook, abi: hookAbi, functionName: "paused" }),
+    sep.readContract({ address: c.hook, abi: hookAbi, functionName: "remainingToday" }),
+    sep.readContract({ address: c.hook, abi: hookAbi, functionName: "maxAmountInPerDay" }),
+  ]);
+  document.getElementById("paused").innerHTML = paused ? `<span class="bad">Paused</span>` : `<span class="ok">Live</span>`;
+  document.getElementById("cap").textContent = `daily cap ${formatUnits(cap, 18)} WETH, ${formatUnits(remaining, 18)} left today`;
+
+  const recvAbi = parseAbi([
+    "function queueLength() view returns (uint256)",
+    "function getPayout(bytes32) view returns ((uint8 outcome, bool ackPending, address recipient, uint128 amount, bytes32 messageId))",
+  ]);
+  document.getElementById("queue").textContent = String(await base.readContract({ address: c.receiver, abi: recvAbi, functionName: "queueLength" }));
+
+  // Grants from events
+  status.textContent = "Scanning grant events…";
+  const latest = await sep.getBlockNumber();
+  const fromBlock = c.deployBlock ? BigInt(c.deployBlock) : latest - CHUNK;
+  const dispatched = await logs(sep, c.dispatcher, parseAbiItem(
+    "event GrantDispatched(bytes32 indexed grantId, bytes32 indexed messageId, address token, uint256 amount, address recipient, uint256 fee)"), fromBlock, latest);
+  const dispAbi = parseAbi(["function statusOf(bytes32) view returns (uint8)"]);
+  const rows = await Promise.all(dispatched.reverse().map(async (l) => {
+    const { grantId, messageId, amount, recipient } = l.args;
+    const [st, p] = await Promise.all([
+      sep.readContract({ address: c.dispatcher, abi: dispAbi, functionName: "statusOf", args: [grantId] }),
+      base.readContract({ address: c.receiver, abi: recvAbi, functionName: "getPayout", args: [grantId] }),
+    ]);
+    return { grantId, messageId, amount, recipient, st: Number(st), outcome: Number(p.outcome), tx: l.transactionHash };
+  }));
+  const settled = rows.filter(r => r.st === 3).length;
+  document.getElementById("nGrants").textContent = String(rows.length);
+  document.getElementById("nSettled").textContent = `${settled} settled, ${rows.length - settled} in flight or held`;
+  document.getElementById("grants").innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td class="mono"><a href="https://sepolia.etherscan.io/tx/${r.tx}" target="_blank" rel="noopener">${short(r.grantId)}</a></td>
+      <td>${Number(formatUnits(r.amount, 18)).toFixed(4)}</td>
+      <td class="mono">${bas(r.recipient)}</td>
+      <td><span class="chip ${r.st === 3 ? "ok" : r.st === 2 ? "warn" : ""}">${STATUS[r.st]}</span></td>
+      <td><span class="chip ${r.outcome === 1 || r.outcome === 3 ? "ok" : r.outcome === 2 ? "warn" : ""}">${OUTCOME[r.outcome]}</span></td>
+      <td><a href="https://ccip.chain.link/msg/${r.messageId}" target="_blank" rel="noopener">explorer</a></td>
+    </tr>`).join("") : `<tr><td colspan="6" class="sub">No grants yet.</td></tr>`;
+  status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+}
+
+document.getElementById("refresh").addEventListener("click", () => load().catch(fail));
+function fail(e) { document.getElementById("status").textContent = `Error: ${e.shortMessage || e.message}`; console.error(e); }
+load().catch(fail);
+</script>
+</body>
+</html>

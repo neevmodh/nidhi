@@ -1,15 +1,19 @@
 {
-  "authority": "0x5afE82AE1f2311C4E9BAF235990953Ce5C7C6d76",
+  "authority": "0x439549E7A153b43E8c307E1Ab8543Aa28D524B28",
   "chainId": 11155111,
+  "dailyCapWei": 1000000000000000,
   "deployer": "0x410b6334F7804Ed55e8a1E00D84f6A4a216dB36E",
-  "dispatcher": "0x825742ff3b49e16E6872A3B0eE89e1883AcDaca3",
+  "dispatcher": "0x5C35D15630af501bf73506eE6cBa37A24cC42bE1",
   "ensName": "nidhi-dao.eth",
   "fee": 3000,
-  "hook": "0xA400E9c24EFf13D9E3AdDa47301Ed875E3dBc0C4",
-  "poolId": "0x91ab5133bfd8a7d714211c7141bbed8be750cd24d241fcc962c1baebf9b31a97",
+  "hook": "0x7709903218297e3cB9bCbb61fee8cEC8514000c4",
+  "poolId": "0x5e7ac7bd1ee3fb290978edc303fe35ebb92ba1f4bb3d4e87e59c64676bebac85",
   "poolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
-  "router": "0xF528F71AececB5eE86e58EcFa7Ca26f46A357c10",
+  "positionId": 41398,
+  "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+  "router": "0x8d0b4e8d05736e09627F18EE2761F37fd9B558A3",
   "tickSpacing": 60,
   "tokenIn": "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
-  "tokenOut": "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05"
+  "tokenOut": "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05",
+  "version": "v3"
 }

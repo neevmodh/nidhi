@@ -77,7 +77,9 @@ contract NidhiInvariantTest is NidhiBase {
         super.setUp();
         weth.mint(executor, 1_000 ether);
         // Deep full-range liquidity so random grant sequences never exhaust the pool (output -> 0).
-        for (uint256 i; i < 40; ++i) bnm.drip(address(this));
+        for (uint256 i; i < 40; ++i) {
+            bnm.drip(address(this));
+        }
         weth.mint(address(this), 100 ether);
         modifyLiquidityRouter.modifyLiquidity(key, ModifyLiquidityParams(-887220, 887220, 20e18, 0), ZERO_BYTES);
         handler = new NidhiHandler(this);
@@ -96,8 +98,7 @@ contract NidhiInvariantTest is NidhiBase {
 
     /// Everything captured is either with the grantee, held at the receiver, or with the recovery address.
     function invariant_valueConserved() public view {
-        uint256 accounted =
-            bnm.balanceOf(recipient) + bnm.balanceOf(address(receiver)) + bnm.balanceOf(RECOVERY);
+        uint256 accounted = bnm.balanceOf(recipient) + bnm.balanceOf(address(receiver)) + bnm.balanceOf(RECOVERY);
         assertEq(accounted, handler.totalCaptured());
     }
 
@@ -113,6 +114,27 @@ contract NidhiInvariantTest is NidhiBase {
             if (dp.outcome == AckLib.HELD) assertEq(uint8(sg.status), uint8(NidhiDispatcher.Status.HELD));
             else assertEq(uint8(sg.status), uint8(NidhiDispatcher.Status.SETTLED));
         }
+    }
+
+    /// The rolling daily cap is never exceeded, whatever sequence of grants runs.
+    function invariant_dailyCapNeverExceeded() public view {
+        assertLe(hook.spentPerDay(block.timestamp / 1 days), hook.maxAmountInPerDay());
+    }
+
+    /// The Automation queue holds exactly the grants that still need work (ACK owed or payout HELD).
+    function invariant_automationQueueIsExact() public view {
+        uint256 needing;
+        for (uint256 i; i < handler.grantCount(); ++i) {
+            DestinationReceiver.Payout memory p = receiver.getPayout(handler.grants(i));
+            bool needs = p.ackPending || p.outcome == AckLib.HELD;
+            if (needs) needing++;
+            bool queued;
+            for (uint256 j; j < receiver.queueLength(); ++j) {
+                if (receiver.queuedAt(j) == handler.grants(i)) queued = true;
+            }
+            assertEq(queued, needs, "queue membership must equal needs-work");
+        }
+        assertEq(receiver.queueLength(), needing);
     }
 
     /// Guard against a vacuous run: both accepted and rejected paths must be exercised.

@@ -31,7 +31,7 @@ contract EnsRegister is NidhiScript {
         vm.stopBroadcast();
 
         // End-to-end check through the exact adapter the hook uses: name -> registry -> resolver -> EAC role.
-        ENSv2Authority probe = new ENSv2Authority(IENSv2Registry(ENS_ETH_REGISTRY), label);
+        ENSv2Authority probe = new ENSv2Authority(IENSv2Registry(ENS_ETH_REGISTRY), label, BASE_SEPOLIA_COIN_TYPE);
         require(probe.currentResolver() == resolver, "name does not resolve to the DAO resolver");
         require(probe.isAuthorized(probe.APPROVER(), vm.parseJsonAddress(json, ".approver")), "approver not authorized");
         require(probe.isAuthorized(probe.AUDITOR(), vm.parseJsonAddress(json, ".auditor")), "auditor not authorized");

@@ -25,6 +25,22 @@ import {DestinationReceiver} from "../../src/DestinationReceiver.sol";
 import {Mandate, Attestation} from "../../src/libraries/Mandate.sol";
 import {IVerifiableFactory, IPermissionedResolver, IETHRegistrar, IMockUSDC} from "../../script/ens/IENSv2.sol";
 
+interface IUserRegistryLike {
+    function setSubregistry(uint256 anyId, address registry) external;
+    function register(
+        string calldata label,
+        address owner,
+        address registry,
+        address resolver,
+        uint256 roleBitmap,
+        uint64 expiry
+    ) external returns (uint256);
+}
+
+interface IAddrSetter {
+    function setAddress(bytes calldata name, uint256 coinType, bytes calldata addr) external;
+}
+
 /// @notice Runs against a Sepolia fork: the REAL ENSv2 contracts and the REAL Uniswap v4 PoolManager.
 ///         CCIP is simulated locally (the live lane is exercised by the deploy scripts).
 ///         Skipped unless SEPOLIA_RPC_URL is set.  forge test --match-contract LiveSepolia -vv
@@ -38,6 +54,8 @@ contract LiveSepoliaTest is Test {
     address constant ENS_REGISTRY = 0xD4eBcbBdF463C9c45784603Db0dDD499BC44A8B4;
     address constant ENS_USDC = 0x240b0316Df57887DBBE58b586508b19e633a14aa;
     uint256 constant ROLE_SET_TEXT = 1 << 4;
+    address constant USER_REGISTRY_IMPL = 0x9BD8a88719068D09ecee662f36C0E3856708366a;
+    uint256 constant COIN_BASE_SEPOLIA = 0x80000000 | 84532;
 
     bool internal forked;
     string internal label;
@@ -54,7 +72,8 @@ contract LiveSepoliaTest is Test {
         forked = true;
         label = string.concat("nidhi-fork-", vm.toString(block.number));
         _registerDaoName();
-        authority = new ENSv2Authority(IENSv2Registry(ENS_REGISTRY), label);
+        _registerGrantee("alice", grantee);
+        authority = new ENSv2Authority(IENSv2Registry(ENS_REGISTRY), label, COIN_BASE_SEPOLIA);
     }
 
     modifier onlyFork() {
@@ -74,11 +93,15 @@ contract LiveSepoliaTest is Test {
         assertFalse(authority.isAuthorized(authority.APPROVER(), dao), "admin bit alone cannot approve");
     }
 
+    function test_live_granteeSubnameResolvesOnChain() public onlyFork {
+        assertEq(authority.resolveGrantee("alice"), grantee, "alice.<dao>.eth -> Base addr via live ENSv2");
+        assertEq(authority.resolveGrantee("bob"), address(0), "unregistered subname resolves to nothing");
+    }
+
     function test_live_ensRevocationIsImmediate() public onlyFork {
         vm.prank(dao);
-        IPermissionedResolver(resolver).revokeRoles(
-            uint256(keccak256("nidhi.role.approver")), ROLE_SET_TEXT, vm.addr(approverPk)
-        );
+        IPermissionedResolver(resolver)
+            .revokeRoles(uint256(keccak256("nidhi.role.approver")), ROLE_SET_TEXT, vm.addr(approverPk));
         assertFalse(authority.isAuthorized(authority.APPROVER(), vm.addr(approverPk)));
     }
 
@@ -130,9 +153,9 @@ contract LiveSepoliaTest is Test {
 
         // Mine a real hook address exactly as the deploy script does.
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG);
-        bytes memory args = abi.encode(manager, authority, dispatcher, address(nidhiRouter), dao);
+        bytes memory args = abi.encode(manager, authority, dispatcher, address(nidhiRouter), dao, uint256(1 ether));
         (address hookAddr, bytes32 salt) = HookMiner.find(address(this), flags, type(NidhiHook).creationCode, args);
-        hook = new NidhiHook{salt: salt}(manager, authority, dispatcher, address(nidhiRouter), dao);
+        hook = new NidhiHook{salt: salt}(manager, authority, dispatcher, address(nidhiRouter), dao, 1 ether);
         assertEq(address(hook), hookAddr, "mined address");
 
         vm.startPrank(dao);
@@ -153,7 +176,9 @@ contract LiveSepoliaTest is Test {
         hook.setPool(key);
 
         PoolModifyLiquidityTest lp = new PoolModifyLiquidityTest(manager);
-        for (uint256 i; i < 5; ++i) bnm.drip(address(this));
+        for (uint256 i; i < 5; ++i) {
+            bnm.drip(address(this));
+        }
         weth.mint(address(this), 5 ether);
         bnm.approve(address(lp), type(uint256).max);
         weth.approve(address(lp), type(uint256).max);
@@ -178,7 +203,8 @@ contract LiveSepoliaTest is Test {
             destReceiver: address(receiver),
             evidenceHash: keccak256("evidence"),
             deadline: uint64(block.timestamp + 1 hours),
-            poolId: PoolId.unwrap(key.toId())
+            poolId: PoolId.unwrap(key.toId()),
+            recipientLabelHash: keccak256("alice")
         });
     }
 
@@ -191,7 +217,8 @@ contract LiveSepoliaTest is Test {
                 approverSig: _sign(approverPk, hook.mandateDigest(m)),
                 attestation: a,
                 auditor: vm.addr(auditorPk),
-                auditorSig: _sign(auditorPk, hook.attestationDigest(a))
+                auditorSig: _sign(auditorPk, hook.attestationDigest(a)),
+                recipientLabel: "alice"
             })
         );
     }
@@ -215,15 +242,20 @@ contract LiveSepoliaTest is Test {
         grants[0] = IPermissionedResolver.Grant({account: dao, roleBitmap: ROLE_SET_TEXT << 128});
 
         vm.startPrank(dao);
-        resolver = IVerifiableFactory(ENS_FACTORY).deployProxy(
-            ENS_RESOLVER_IMPL, uint256(keccak256(bytes(label))), abi.encodeCall(IPermissionedResolver.initialize, (grants, new bytes[](0)))
-        );
-        IPermissionedResolver(resolver).grantSetterRoles(
-            abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.approver", "")), vm.addr(approverPk)
-        );
-        IPermissionedResolver(resolver).grantSetterRoles(
-            abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.auditor", "")), vm.addr(auditorPk)
-        );
+        resolver = IVerifiableFactory(ENS_FACTORY)
+            .deployProxy(
+                ENS_RESOLVER_IMPL,
+                uint256(keccak256(bytes(label))),
+                abi.encodeCall(IPermissionedResolver.initialize, (grants, new bytes[](0)))
+            );
+        IPermissionedResolver(resolver)
+            .grantSetterRoles(
+                abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.approver", "")), vm.addr(approverPk)
+            );
+        IPermissionedResolver(resolver)
+            .grantSetterRoles(
+                abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.auditor", "")), vm.addr(auditorPk)
+            );
 
         bytes32 secret = keccak256("secret");
         registrar.commit(registrar.makeCommitment(label, dao, secret, address(0), resolver, 365 days, bytes32(0)));
@@ -232,6 +264,35 @@ contract LiveSepoliaTest is Test {
         IMockUSDC(ENS_USDC).mint(dao, base + premium);
         IMockUSDC(ENS_USDC).approve(ENS_REGISTRAR, base + premium);
         registrar.register(label, dao, secret, address(0), resolver, 365 days, ENS_USDC, bytes32(0));
+        vm.stopPrank();
+    }
+
+    /// Real ENSv2 subname: UserRegistry subregistry for the DAO name + grants resolver with a Base addr record.
+    function _registerGrantee(string memory grLabel, address wallet) internal {
+        IPermissionedResolver.Grant[] memory rg = new IPermissionedResolver.Grant[](1);
+        rg[0] = IPermissionedResolver.Grant(dao, (1 << 0) | ((1 << 0) << 128) | (1 << 24) | ((1 << 24) << 128));
+        IPermissionedResolver.Grant[] memory g = new IPermissionedResolver.Grant[](1);
+        g[0] = IPermissionedResolver.Grant(dao, (1 << 0) | ((1 << 0) << 128));
+
+        vm.startPrank(dao);
+        address sub = IVerifiableFactory(ENS_FACTORY)
+            .deployProxy(
+                USER_REGISTRY_IMPL,
+                uint256(keccak256(abi.encode(label, "sub"))),
+                abi.encodeWithSignature("initialize((address,uint256)[])", rg)
+            );
+        IUserRegistryLike(ENS_REGISTRY).setSubregistry(uint256(keccak256(bytes(label))), sub);
+        address gres = IVerifiableFactory(ENS_FACTORY)
+            .deployProxy(
+                ENS_RESOLVER_IMPL,
+                uint256(keccak256(abi.encode(label, "gres"))),
+                abi.encodeCall(IPermissionedResolver.initialize, (g, new bytes[](0)))
+            );
+        IUserRegistryLike(sub).register(grLabel, dao, address(0), gres, 0, uint64(block.timestamp + 180 days));
+        bytes memory dns = abi.encodePacked(
+            uint8(bytes(grLabel).length), grLabel, uint8(bytes(label).length), label, uint8(3), "eth", uint8(0)
+        );
+        IAddrSetter(gres).setAddress(dns, COIN_BASE_SEPOLIA, abi.encodePacked(wallet));
         vm.stopPrank();
     }
 

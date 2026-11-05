@@ -85,3 +85,38 @@ The adapter matches the `PermissionedResolver` implementation deployed on Sepoli
 3. **The LLM review is advisory** (model `claude-opus-5-5`, structured JSON output). It can only veto, and it never sees or sets amounts. Current models reject `temperature`, so reproducibility comes from the rubric, not from sampling settings.
 4. **`evidenceHash`** = `keccak256(abi.encode(inputsHash, rubricHash, promptHash, modelHash, outputHash))`. The approver signs this value inside the Mandate.
 5. **`verify.ts`** recomputes everything reproducible from scratch, checks the auditor's signature, and checks the auditor's ENS role on-chain.
+
+## v3 additions
+
+### Safety rails (NidhiHook)
+- **Daily cap:** `maxAmountInPerDay` is immutable. `spentPerDay[block.timestamp / 1 days]` is checked and incremented in `beforeSwap`; `remainingToday()` is a public view.
+- **Guardian kill-switch:** `setPaused(bool)` is callable only by an account holding the ENS role `nidhi.role.guardian`. While paused, `beforeSwap` reverts first.
+- **Cancellation:** `cancelGrant(grantId)` is callable by any ENS approver. It marks the grant used, so a signed mandate can never execute.
+- **Batch:** `NidhiSwapRouter.swapBatch` runs N swaps inside one `unlock`. The transient grant slot hands over sequentially, each grant sends its own CCIP message, and the whole batch is all or nothing. Off-chain quoting gives grant *i* the marginal band `quote(prior + amount) − quote(prior)`.
+
+### ENS-native payouts
+```
+Mandate.recipientLabelHash = keccak256("alice")            (signed by the approver)
+GrantAuth.recipientLabel   = "alice"                        (hook checks keccak == signed hash)
+ENSv2Authority.resolveGrantee("alice"):
+  ETHRegistry.getSubregistry("nidhi-dao")      → UserRegistry (0x562F…C656)
+  UserRegistry.getResolver("alice")            → grants resolver (0x0195…bd4A)
+  resolver.resolve(dns("alice.nidhi-dao.eth"), addr(node, 0x80000000 | 84532))  → grantee on Base
+hook requires mandate.recipient == resolved (≠ 0)
+```
+Every link fails closed to `address(0)`: no subregistry, an expired subname, a reverting resolver, a malformed record.
+
+### Discovery from ENS
+`nidhi-dao.eth` carries text records `nidhi.contract.{hook,dispatcher,router,authority,receiver,poolId,deployBlock}`. The dashboard (`docs/index.html`) and anyone else find the deployment from the name alone.
+
+### Self-healing destination (Chainlink Automation)
+`DestinationReceiver` keeps an exact queue of grants that need work: an ACK still owed (`ackPending`) or a payout `HELD`.
+- `checkUpkeep` returns up to `MAX_BATCH` actionable ids. A HELD grant isn't actionable while payouts are paused.
+- `performUpkeep` re-checks each id: it pays HELD grants to their original recipient, then ACKs, or retries owed ACKs. Stale ids are skipped, never reverted on.
+- The upkeep is registered on Automation Registry 2.3 (Base Sepolia) by `script/09_RegisterUpkeep.s.sol`.
+
+### AI jury
+`offchain/src/llm/` holds the provider adapters: Groq and Cerebras (OpenAI-compatible), Gemini (`generateContent` + `responseSchema`), and optional Claude.
+- Models are discovered from each provider's model list unless pinned by `*_MODEL`.
+- Veto rule: at least `min(2, reviewed)` jurors must say "inconsistent".
+- The sorted `provider:model` list is bound into `modelHash`, and every raw verdict into `outputHash`.

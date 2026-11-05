@@ -1,0 +1,14 @@
+{
+  "grantLabel": "nidhi-003",
+  "grantId": "0x2754755d462c99be4ed56ec120c6197289bdb6fcbb09a05909c00db1615f8fdd",
+  "evidenceHash": "0xe500bd670932e5cee0a7d5cadc6b7d8924305af53430d1e37c0c8a14702bb341",
+  "inputsHash": "0x1a68be5001582701bf5b9e8754e1425b0ba66a7b8bd50e58f5c7df5a7a87e280",
+  "rubricHash": "0xf5e63652753f2fe2d6e0b367d85622a63e7dff60b170bf21a7a141939fc49f19",
+  "issuedAt": 1793894081,
+  "granteeLabel": "alice",
+  "amountInWei": "200000000000000",
+  "auditor": "0x031aD51C31298Cc79AAf0e225c93F1CB5924495e",
+  "auditorSig": "0xfdd2d38b24f549c1d82d297b6c58f27e0ee882e02df1a03f8be69f6e5038950f1cda90bab20ada93dfd161bc1f434bcf064d48e0ab60d289510235e60fc5b6d91c",
+  "hook": "0x7709903218297e3cB9bCbb61fee8cEC8514000c4",
+  "chainId": 11155111
+}

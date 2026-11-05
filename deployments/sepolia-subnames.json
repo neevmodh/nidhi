@@ -1,0 +1,7 @@
+{
+  "auditor": "auditor.nidhi-dao.eth",
+  "grantee": "alice.nidhi-dao.eth",
+  "granteeWallet": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+  "grantsResolver": "0x0195E12dD817F97e7CF7226858F64B8a6BC9bd4A",
+  "subregistry": "0x562FB95c17272B850c99496e565bA5eCEDA6C656"
+}

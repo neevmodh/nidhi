@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPublicClient, http, recoverTypedDataAddress, parseAbi, type Hex } from "viem";
 import { sepolia } from "viem/chains";
-import { canonical, evaluateRubric, evidenceHashOf, fetchEvidence, grantIdOf, hashJson, hashText } from "./lib.ts";
+import { canonical, evaluateRubric, evidenceHashOf, fetchEvidence, grantIdOf, hashJson, hashText, modelIdentity } from "./lib.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -41,22 +41,29 @@ async function main() {
 
   // 2. Rubric and its verdict are deterministic.
   check("rubricHash reproduces", hashJson(b.rubric) === b.hashes.rubricHash);
-  const results = evaluateRubric(evidence, b.rubric.rules);
+  const results = evaluateRubric(evidence, b.rubric.rules, b.grant.requiredPathGlobs ?? []);
   check("rubric verdict reproduces", canonical(results) === canonical(b.output.results));
   check("promptHash reproduces", hashText(b.systemPrompt) === b.hashes.promptHash);
 
   // 3. Recorded (non-reproducible) LLM output is bound by its hash.
   check("outputHash binds recorded output", hashJson(b.output) === b.hashes.outputHash);
-  const modelHash = hashText(b.output.llm.status === "reviewed" ? b.output.llm.model : "none");
-  check("modelHash binds model id", modelHash === b.hashes.modelHash);
+  const modelHash = hashText(modelIdentity(b.output.jury.jurors));
+  check("modelHash binds juror models", modelHash === b.hashes.modelHash);
+  for (const j of b.output.jury.jurors) {
+    console.log(`  --    juror ${j.provider}: ${j.status === "reviewed" ? `${j.model} -> ${j.review.verdict}` : `unavailable (${j.reason})`}`);
+  }
   const evidenceHash = evidenceHashOf({ ...b.hashes, modelHash });
   check("evidenceHash reproduces", evidenceHash === b.hashes.evidenceHash, evidenceHash);
   check("grantId = DAO label", grantIdOf(b.grantLabel) === b.grantId);
 
   // 4. Signature and on-chain role.
-  if (fs.existsSync(attPath)) {
-    const a = JSON.parse(fs.readFileSync(attPath, "utf8"));
-    check("attestation matches bundle", a.evidenceHash === b.hashes.evidenceHash && a.grantId === b.grantId);
+  const att = fs.existsSync(attPath) ? JSON.parse(fs.readFileSync(attPath, "utf8")) : null;
+  if (!b.output.pass) {
+    console.log("  --    grant was REJECTED by the auditor: no attestation expected");
+    check("no attestation exists for a rejected grant", !att || att.grantId !== b.grantId);
+  } else if (att && att.grantId === b.grantId) {
+    const a = att;
+    check("attestation matches bundle", a.evidenceHash === b.hashes.evidenceHash);
     if (a.auditorSig) {
       const signer = await recoverTypedDataAddress({
         domain: { name: "Nidhi", version: "1", chainId: a.chainId, verifyingContract: a.hook },

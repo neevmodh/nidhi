@@ -1,0 +1,40 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    env:
+      FOUNDRY_PROFILE: default
+      # Live Sepolia fork suites run only when the repository secret is configured; otherwise they skip.
+      SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: Format
+        run: forge fmt --check src test script
+      - name: Build
+        run: forge build --sizes
+      - name: Test (unit, fuzz, invariant, fork-if-configured)
+        run: forge test -vv
+      - name: Gas snapshot
+        run: forge snapshot --check --no-match-contract "LiveSepolia|Spike|DrainCheck|NidhiInvariantTest"
+
+  auditor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: offchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Re-verify the committed audit of grant nidhi-003 from scratch (GitHub evidence, hashes, signature)
+        run: node src/verify.ts fixtures/nidhi-003/evidence-bundle.json fixtures/nidhi-003/attestation.json

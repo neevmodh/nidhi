@@ -102,7 +102,7 @@ function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${esc.replace(/\u0000/g, ".*")}$`);
 }
 
-export function evaluateRubric(e: Evidence, rules: any): RuleResult[] {
+export function evaluateRubric(e: Evidence, rules: any, grantGlobs: string[] = []): RuleResult[] {
   const out: RuleResult[] = [];
   if (rules.requireMerged) out.push({ rule: "requireMerged", pass: e.merged, detail: `merged=${e.merged}` });
   out.push({
@@ -118,7 +118,7 @@ export function evaluateRubric(e: Evidence, rules: any): RuleResult[] {
       detail: failed.length ? `failed: ${failed.map((c) => c.name).join(", ")}` : `${e.checks.length} check(s), none failed`,
     });
   }
-  for (const g of rules.requiredPathGlobs ?? []) {
+  for (const g of [...(rules.requiredPathGlobs ?? []), ...grantGlobs]) {
     const re = globToRegExp(g);
     const hits = e.files.filter((f) => re.test(f.filename)).length;
     out.push({ rule: `touches:${g}`, pass: hits > 0, detail: `${hits} file(s) match` });
@@ -131,4 +131,10 @@ export function evaluateRubric(e: Evidence, rules: any): RuleResult[] {
     });
   }
   return out;
+}
+
+/** Model identity bound into evidenceHash: sorted "provider:model" of every juror that actually reviewed. */
+export function modelIdentity(jurors: any[]): string {
+  const ids = jurors.filter((j) => j.status === "reviewed").map((j) => `${j.provider}:${j.model}`).sort();
+  return ids.length ? ids.join(",") : "none";
 }

@@ -62,7 +62,12 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     event DestReceiverSet(address receiver);
     event DestGasLimitSet(uint32 gasLimit);
     event GrantDispatched(
-        bytes32 indexed grantId, bytes32 indexed messageId, address token, uint256 amount, address recipient, uint256 fee
+        bytes32 indexed grantId,
+        bytes32 indexed messageId,
+        address token,
+        uint256 amount,
+        address recipient,
+        uint256 fee
     );
     event GrantAcknowledged(bytes32 indexed grantId, bytes32 indexed messageId, uint8 outcome, Status status);
     event GrantStuck(bytes32 indexed grantId, bytes32 indexed messageId, uint64 dispatchedAt);

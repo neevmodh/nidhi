@@ -29,6 +29,7 @@ contract NidhiSwapRouter is IUnlockCallback, IMsgSender {
     error Reentrant();
     error NativeNotSupported();
     error DeadlinePassed();
+    error LengthMismatch();
 
     constructor(IPoolManager poolManager_) {
         poolManager = poolManager_;
@@ -59,22 +60,44 @@ contract NidhiSwapRouter is IUnlockCallback, IMsgSender {
         if (block.timestamp > deadline) revert DeadlinePassed();
         if (_initiator() != address(0)) revert Reentrant();
         if (key.currency0.isAddressZero()) revert NativeNotSupported();
+        SwapParams[] memory ps = new SwapParams[](1);
+        bytes[] memory hs = new bytes[](1);
+        ps[0] = params;
+        hs[0] = hookData;
         _setInitiator(msg.sender);
-        delta = abi.decode(poolManager.unlock(abi.encode(key, params, hookData)), (BalanceDelta));
+        BalanceDelta[] memory deltas = abi.decode(poolManager.unlock(abi.encode(key, ps, hs)), (BalanceDelta[]));
+        _setInitiator(address(0));
+        delta = deltas[0];
+    }
+
+    /// @notice Pay several grants in one transaction: one swap per grant inside a single unlock. All or nothing.
+    function swapBatch(PoolKey calldata key, SwapParams[] calldata params, bytes[] calldata hookData, uint256 deadline)
+        external
+        returns (BalanceDelta[] memory deltas)
+    {
+        if (block.timestamp > deadline) revert DeadlinePassed();
+        if (_initiator() != address(0)) revert Reentrant();
+        if (key.currency0.isAddressZero()) revert NativeNotSupported();
+        if (params.length != hookData.length || params.length == 0) revert LengthMismatch();
+        _setInitiator(msg.sender);
+        deltas = abi.decode(poolManager.unlock(abi.encode(key, params, hookData)), (BalanceDelta[]));
         _setInitiator(address(0));
     }
 
     /// @inheritdoc IUnlockCallback
     function unlockCallback(bytes calldata data) external returns (bytes memory) {
         if (msg.sender != address(poolManager)) revert NotPoolManager();
-        (PoolKey memory key, SwapParams memory params, bytes memory hookData) =
-            abi.decode(data, (PoolKey, SwapParams, bytes));
+        (PoolKey memory key, SwapParams[] memory params, bytes[] memory hookData) =
+            abi.decode(data, (PoolKey, SwapParams[], bytes[]));
 
-        BalanceDelta delta = poolManager.swap(key, params, hookData);
-
-        _resolve(key.currency0, delta.amount0());
-        _resolve(key.currency1, delta.amount1());
-        return abi.encode(delta);
+        BalanceDelta[] memory deltas = new BalanceDelta[](params.length);
+        for (uint256 i; i < params.length; ++i) {
+            BalanceDelta delta = poolManager.swap(key, params[i], hookData[i]);
+            _resolve(key.currency0, delta.amount0());
+            _resolve(key.currency1, delta.amount1());
+            deltas[i] = delta;
+        }
+        return abi.encode(deltas);
     }
 
     function _resolve(Currency currency, int128 amount) private {

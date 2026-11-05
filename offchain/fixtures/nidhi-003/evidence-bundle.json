@@ -1,0 +1,208 @@
+{
+  "grant": {
+    "amountInWei": "200000000000000",
+    "grantee": "alice",
+    "pr": 82,
+    "repo": "Uniswap/v4-template",
+    "requiredPathGlobs": [
+      "foundry.toml",
+      "lib/**"
+    ],
+    "rfp": "rfp/nidhi-003.md"
+  },
+  "grantId": "0x2754755d462c99be4ed56ec120c6197289bdb6fcbb09a05909c00db1615f8fdd",
+  "grantLabel": "nidhi-003",
+  "hashes": {
+    "evidenceHash": "0xe500bd670932e5cee0a7d5cadc6b7d8924305af53430d1e37c0c8a14702bb341",
+    "inputsHash": "0x1a68be5001582701bf5b9e8754e1425b0ba66a7b8bd50e58f5c7df5a7a87e280",
+    "modelHash": "0xf4915122cc2b3d2dae9e7d77a78c2eb0cef7b55de5c725eea56e2027332489e1",
+    "outputHash": "0x33610f1a105c19e47e40c7bc6900a4d3f9087d8adcb38d5a7d55053c3f4f8262",
+    "promptHash": "0xf27d22de16d9c3e053f4de3fa1bfbbe726e9351e3f61178b25c767e60558fa79",
+    "rubricHash": "0xf5e63652753f2fe2d6e0b367d85622a63e7dff60b170bf21a7a141939fc49f19"
+  },
+  "inputs": {
+    "diffHash": "0xfa314628b07abab7573469645eef2c96e0119534d14d22d027572638765f7474",
+    "evidence": {
+      "approvals": 1,
+      "author": "akshatmittal",
+      "checks": [],
+      "files": [
+        {
+          "additions": 1,
+          "deletions": 1,
+          "filename": ".gitmodules",
+          "sha": "c99f788eb8eacd6aaa173c5fba9f6897aa9d97e7",
+          "status": "modified"
+        },
+        {
+          "additions": 11,
+          "deletions": 0,
+          "filename": "foundry.lock",
+          "sha": "38943f4f6822695b7089773a78000b2d3b311d16",
+          "status": "added"
+        },
+        {
+          "additions": 4,
+          "deletions": 2,
+          "filename": "foundry.toml",
+          "sha": "25e1b7bd404b13b380f62b6704c859efa33f4e06",
+          "status": "modified"
+        },
+        {
+          "additions": 1,
+          "deletions": 1,
+          "filename": "lib/forge-std",
+          "sha": "8bbcf6e3f8f62f419e5429a0bd89331c85c37824",
+          "status": "modified"
+        },
+        {
+          "additions": 1,
+          "deletions": 1,
+          "filename": "lib/hookmate",
+          "sha": "33408fbc15e083eb0bc4205fa37cb6ba0a926f44",
+          "status": "modified"
+        },
+        {
+          "additions": 1,
+          "deletions": 1,
+          "filename": "lib/uniswap-hooks",
+          "sha": "e59fe72c110c3862eec9b332530dce49ca506bbb",
+          "status": "modified"
+        },
+        {
+          "additions": 2,
+          "deletions": 6,
+          "filename": "script/01_CreatePoolAndAddLiquidity.s.sol",
+          "sha": "c5c410b4027ae8385a8313319161f03aa10c766c",
+          "status": "modified"
+        },
+        {
+          "additions": 2,
+          "deletions": 6,
+          "filename": "script/02_AddLiquidity.s.sol",
+          "sha": "2e02f7f4457c02cd1e45be7cbdf895dba8c688fe",
+          "status": "modified"
+        },
+        {
+          "additions": 5,
+          "deletions": 0,
+          "filename": "script/base/LiquidityHelpers.sol",
+          "sha": "1db46878245936da6188a6f14f95a6f8fb5ed321",
+          "status": "modified"
+        },
+        {
+          "additions": 1,
+          "deletions": 2,
+          "filename": "test/Counter.t.sol",
+          "sha": "ff7fecbc45edb3d261005f2bed1655908ec7a8cc",
+          "status": "modified"
+        },
+        {
+          "additions": 1,
+          "deletions": 1,
+          "filename": "test/utils/Deployers.sol",
+          "sha": "0ccdec79571d79e65d30f2d78bf309dad183aaaa",
+          "status": "modified"
+        },
+        {
+          "additions": 1,
+          "deletions": 2,
+          "filename": "test/utils/libraries/EasyPosm.t.sol",
+          "sha": "94be1ed642a22e9a28227debb692a180600fe005",
+          "status": "modified"
+        }
+      ],
+      "headSha": "101709c2917d9a1428eb012c78e2555aab98f9ab",
+      "mergeCommitSha": "9b68e67ac237ffa7cc8a56c9785a8fbfe2af2662",
+      "merged": true,
+      "mergedAt": "2025-08-22T16:38:53Z",
+      "pr": 82,
+      "repo": "Uniswap/v4-template",
+      "title": "Update template and cleanup"
+    },
+    "pr": 82,
+    "repo": "Uniswap/v4-template",
+    "rfpHash": "0xd4ce5eab5c14f9fa45c33796ccf18e54072ac2247a6e879dd645d4d15507ec99"
+  },
+  "issuedAt": 1793894081,
+  "output": {
+    "jury": {
+      "inconsistentVotes": 0,
+      "jurors": [
+        {
+          "provider": "groq",
+          "reason": "no API key configured",
+          "status": "unavailable"
+        },
+        {
+          "provider": "gemini",
+          "reason": "no API key configured",
+          "status": "unavailable"
+        },
+        {
+          "provider": "cerebras",
+          "reason": "no API key configured",
+          "status": "unavailable"
+        },
+        {
+          "provider": "anthropic",
+          "reason": "no API key configured",
+          "status": "unavailable"
+        }
+      ],
+      "reviewed": 0,
+      "veto": false,
+      "vetoThreshold": 1
+    },
+    "pass": true,
+    "results": [
+      {
+        "detail": "merged=true",
+        "pass": true,
+        "rule": "requireMerged"
+      },
+      {
+        "detail": "1 approval(s), need 1",
+        "pass": true,
+        "rule": "minApprovals"
+      },
+      {
+        "detail": "0 check(s), none failed",
+        "pass": true,
+        "rule": "requireNoFailedChecks"
+      },
+      {
+        "detail": "1 file(s) match",
+        "pass": true,
+        "rule": "touches:foundry.toml"
+      },
+      {
+        "detail": "3 file(s) match",
+        "pass": true,
+        "rule": "touches:lib/**"
+      },
+      {
+        "detail": "12 file(s) changed, max 60",
+        "pass": true,
+        "rule": "maxFilesChanged"
+      }
+    ]
+  },
+  "rubric": {
+    "description": "Deterministic acceptance rules. The pass/fail decision is made here, never by the LLM.",
+    "llm": {
+      "note": "The LLM may veto (verdict=inconsistent) but cannot pass a deliverable that fails a rule, and never sets an amount or recipient.",
+      "role": "advisory-veto-only"
+    },
+    "note": "Path requirements are per grant (grants.json: requiredPathGlobs), committed by the DAO before the audit.",
+    "rules": {
+      "maxFilesChanged": 60,
+      "minApprovals": 1,
+      "requireMerged": true,
+      "requireNoFailedChecks": true,
+      "requiredPathGlobs": []
+    },
+    "version": 1
+  },
+  "systemPrompt": "You are an independent auditor for a DAO grant program.\nYou receive a request for proposals (RFP) and the full diff of a merged pull request submitted as the deliverable.\nDecide whether the diff plausibly fulfils the RFP's stated deliverable and acceptance criteria.\nYou do not decide payment amounts or recipients and must not comment on them.\nReport every concrete concern you notice; downstream rules filter them.\nAnswer \"inconsistent\" only when the diff clearly does not deliver what the RFP asks for.\nAnswer \"insufficient_evidence\" when the diff alone cannot show it either way.\nRespond with ONLY a JSON object: {\"verdict\": \"consistent\" | \"inconsistent\" | \"insufficient_evidence\", \"summary\": string, \"concerns\": string[]}."
+}
