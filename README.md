@@ -25,6 +25,25 @@ The swap output then goes straight into **Chainlink CCIP** and on to the grantee
  Base Sepolia: DestinationReceiver ─ pays grantee (or HOLDS, recoverable) ─ ACK via CCIP ─▶ dispatcher: SETTLED
 ```
 
+## Live deployment (testnet)
+
+| Component | Chain | Address |
+|---|---|---|
+| DAO name `nidhi-dao.eth` (ENSv2) → resolver | Sepolia | [`0x0D919208f68a4156E7580B9101171fa72dECaBbF`](https://sepolia.etherscan.io/address/0x0D919208f68a4156E7580B9101171fa72dECaBbF) |
+| `NidhiHook` (flags `0xC4`) | Sepolia | [`0xA400E9c24EFf13D9E3AdDa47301Ed875E3dBc0C4`](https://sepolia.etherscan.io/address/0xA400E9c24EFf13D9E3AdDa47301Ed875E3dBc0C4) |
+| `NidhiDispatcher` | Sepolia | [`0x825742ff3b49e16E6872A3B0eE89e1883AcDaca3`](https://sepolia.etherscan.io/address/0x825742ff3b49e16E6872A3B0eE89e1883AcDaca3) |
+| `NidhiSwapRouter` | Sepolia | [`0xF528F71AececB5eE86e58EcFa7Ca26f46A357c10`](https://sepolia.etherscan.io/address/0xF528F71AececB5eE86e58EcFa7Ca26f46A357c10) |
+| `ENSv2Authority` | Sepolia | [`0x5afE82AE1f2311C4E9BAF235990953Ce5C7C6d76`](https://sepolia.etherscan.io/address/0x5afE82AE1f2311C4E9BAF235990953Ce5C7C6d76) |
+| `DestinationReceiver` | Base Sepolia | [`0xc4df9D78f3A1031e331235678758020b493A58f9`](https://sepolia.basescan.org/address/0xc4df9D78f3A1031e331235678758020b493A58f9) |
+
+**Grant `nidhi-001`** (deliverable: Uniswap/v4-template#90, audited by `offchain/src/audit.ts`, which signed the attestation itself):
+- **One Sepolia transaction** ([`0xeef72833…3948`](https://sepolia.etherscan.io/tx/0xeef72833d24991172178bef1100955f8f45a54bbfcd93a08d511733c9ac03948)) did all of this:
+  - verified the approver and auditor signatures;
+  - checked both ENS roles through `nidhi-dao.eth`;
+  - swapped 0.0001 WETH;
+  - passed the full 0.0947 CCIP-BnM output to CCIP.
+- **CCIP message:** [`0xdeaaa58f…621b`](https://ccip.chain.link/msg/0xdeaaa58fba42a708914c5bb4ea16f418808c7c26aa6834db5436c6da643f621b)
+
 ## Sponsor integrations (with exact code)
 
 ### Uniswap v4: custom hook with `beforeSwap`, `afterSwap` and `afterSwapReturnDelta`
