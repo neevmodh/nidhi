@@ -124,7 +124,7 @@ contract LiveSepoliaTest is Test {
         (sel, router,,,, bnm,) = sim.configuration();
         weth = new MockERC20("WETH", "WETH", 18);
 
-        nidhiRouter = new NidhiSwapRouter(manager);
+        nidhiRouter = new NidhiSwapRouter(manager, address(0), address(0));
         dispatcher = new NidhiDispatcher(address(router), address(0), sel, dao);
         receiver = new DestinationReceiver(address(router), sel, address(bnm), address(0), dao);
 

@@ -64,8 +64,6 @@ contract DeploySource is NidhiScript {
         uint256 seedDrips = vm.envOr("SEED_BNM_DRIPS", uint256(3)); // 1 CCIP-BnM per drip
         uint256 linkForFees = vm.envOr("DISPATCHER_LINK", uint256(5 ether));
 
-        require(SEP_WETH < SEP_BNM, "expected WETH to be currency0");
-
         vm.startBroadcast(pk);
         Deployed memory d = _deployCore(deployer, label);
         _createPool(d, seedWeth, seedDrips, deployer);
@@ -77,7 +75,7 @@ contract DeploySource is NidhiScript {
 
     function _deployCore(address deployer, string memory label) internal returns (Deployed memory d) {
         d.authority = new ENSv2Authority(IENSv2Registry(ENS_ETH_REGISTRY), label);
-        d.router = new NidhiSwapRouter(IPoolManager(SEP_POOL_MANAGER));
+        d.router = new NidhiSwapRouter(IPoolManager(SEP_POOL_MANAGER), SEP_WETH, PERMIT2);
         d.dispatcher = new NidhiDispatcher(SEP_CCIP_ROUTER, SEP_LINK, BASE_SELECTOR, deployer);
 
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG);
@@ -93,9 +91,13 @@ contract DeploySource is NidhiScript {
     }
 
     function _createPool(Deployed memory d, uint256 seedWeth, uint256 seedDrips, address deployer) internal {
+        // Sort currency addresses — Uniswap v4 requires currency0 < currency1 as uint160.
+        (Currency c0, Currency c1) = SEP_WETH < SEP_BNM
+            ? (Currency.wrap(SEP_WETH), Currency.wrap(SEP_BNM))
+            : (Currency.wrap(SEP_BNM), Currency.wrap(SEP_WETH));
         d.key = PoolKey({
-            currency0: Currency.wrap(SEP_WETH),
-            currency1: Currency.wrap(SEP_BNM),
+            currency0: c0,
+            currency1: c1,
             fee: FEE,
             tickSpacing: TICK_SPACING,
             hooks: IHooks(address(d.hook))

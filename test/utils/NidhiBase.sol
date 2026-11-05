@@ -91,7 +91,7 @@ abstract contract NidhiBase is Test, Deployers {
         eac.grant(AUDITOR_RES, ROLE_SET_TEXT, auditor);
 
         // --- Nidhi
-        nidhiRouter = new NidhiSwapRouter(manager);
+        nidhiRouter = new NidhiSwapRouter(manager, address(0), address(0));
         dispatcher = new NidhiDispatcher(address(ccipRouter), link, chainSelector, daoOwner);
         receiver = new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), link, daoOwner);
 

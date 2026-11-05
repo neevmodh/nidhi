@@ -18,8 +18,7 @@ import {NidhiSwapRouter} from "../src/NidhiSwapRouter.sol";
 import {NidhiDispatcher} from "../src/NidhiDispatcher.sol";
 import {Mandate, Attestation} from "../src/libraries/Mandate.sol";
 
-interface IWETH9Demo {
-    function deposit() external payable;
+interface IERC20Min {
     function approve(address, uint256) external returns (bool);
     function balanceOf(address) external view returns (uint256);
 }
@@ -49,7 +48,7 @@ contract Demo is NidhiScript {
 
         string memory sj = vm.readFile(SEP_JSON);
         hook = NidhiHook(vm.parseJsonAddress(sj, ".hook"));
-        router = NidhiSwapRouter(vm.parseJsonAddress(sj, ".router"));
+        router = NidhiSwapRouter(payable(vm.parseJsonAddress(sj, ".router")));
         poolId = vm.parseJsonBytes32(sj, ".poolId");
         NidhiDispatcher dispatcher = NidhiDispatcher(payable(vm.parseJsonAddress(sj, ".dispatcher")));
         key = PoolKey(Currency.wrap(SEP_WETH), Currency.wrap(SEP_BNM), 3000, 60, IHooks(address(hook)));
@@ -59,8 +58,9 @@ contract Demo is NidhiScript {
         bytes memory hookData = _hookData(m, a);
 
         vm.startBroadcast(pk);
-        if (IWETH9Demo(SEP_WETH).balanceOf(executor) < amountIn) IWETH9Demo(SEP_WETH).deposit{value: amountIn}();
-        IWETH9Demo(SEP_WETH).approve(address(router), amountIn);
+        // Approve tokenIn (read from deployment JSON — works for any ERC-20, not just WETH).
+        address tokenIn = vm.parseJsonAddress(sj, ".tokenIn");
+        IERC20Min(tokenIn).approve(address(router), amountIn);
         router.swap(key, SwapParams(true, -int256(uint256(amountIn)), TickMath.MIN_SQRT_PRICE + 1), hookData, block.timestamp + 300);
         vm.stopBroadcast();
 

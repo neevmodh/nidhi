@@ -52,7 +52,7 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
 
     address public hook; // set once
     address public destReceiver; // set once
-    uint32 public destGasLimit = 600_000;
+    uint32 public destGasLimit = 400_000;
     /// @notice Grants still DISPATCHED after this long can be flagged (CCIP's executor retries for ~8h).
     uint64 public constant STUCK_AFTER = 6 hours;
 

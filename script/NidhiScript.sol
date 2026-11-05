@@ -11,6 +11,8 @@ abstract contract NidhiScript is Script {
     address constant SEP_LINK = 0x779877A7B0D9E8603169DdbD7836e478b4624789;
     address constant SEP_BNM = 0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05;
     address constant SEP_WETH = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
+    /// @notice Canonical Permit2 (same address on all EVM chains).
+    address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
     uint64 constant SEP_SELECTOR = 16015286601757825753;
 
     // ---------------------------------------------------------------- Base Sepolia (84532)
