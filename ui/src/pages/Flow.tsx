@@ -84,7 +84,7 @@ export function NewGrant() {
   const { address } = useAccount();
   const st = useChainState(chainId);
 
-  const stacks = stacksOf(src);
+  const stacks = stacksOf(src).filter((s) => !s.retired); // new grants only go through current deployments
   const want = params.get("stack") as Stack["kind"] | null;
   const [kind, setKind] = useState<Stack["kind"]>(want && stacks.some((s) => s.kind === want) ? want : "roles");
   const stack = stackOf(src, kind);
