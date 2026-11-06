@@ -230,7 +230,7 @@ export default function Landing() {
                 <span className="lp-avatar"><span className="lp-dao"><Mark size={28} /></span><EnsBadge /></span>
                 <span className="lp-node__who"><EnsName label="nidhi-dao" parent=".eth" /><ChainChip logo="ethereum">Sepolia<em>·</em>DAO treasury</ChainChip></span>
               </div>
-              <p className="lp-node__note">Milestone b2 approved · <b>0.0003 WETH</b></p>
+              <p className="lp-node__note">b2 approved · <b>0.0003&nbsp;WETH</b></p>
             </div>
             <span className="lp-wire"><i className="lp-dot" /></span>
             <div className="lp-proto"><ProtocolLogo name="uniswap" size="lg" /><span><b>Uniswap v4 hook</b><small>checks, then swaps</small></span></div>
