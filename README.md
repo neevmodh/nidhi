@@ -202,9 +202,21 @@ The **deterministic rubric** decides pass or fail. **AI models** (Groq, Gemini, 
 
 ## 7. Live deployment
 
-Four testnets, each running the full stack (hook, router, dispatcher, receiver), wired along real CCIP lanes. The payout token on testnets is CCIP-BnM. Ownership is handed to the DAO admin `0x9f75…b9C7` (Ownable2Step).
+Four testnets, each running the full stack (hook, router, dispatcher, receiver), wired along real CCIP lanes. The payout token on testnets is CCIP-BnM. Ownership is handed to the DAO admin `0x9f75…b9C7` (Ownable2Step). **Every contract is source-verified** on its block explorer, and each link below opens the verified code.
 
-### Main stacks (role registry)
+### The live product: 7 verified contracts (ENSv2 roles + CCIP 2.0 Faster-Than-Finality)
+
+| # | Contract | Chain | Verified source | What it does |
+|---|---|---|---|---|
+| 1 | `NidhiHook` | Ethereum Sepolia | [`0x53d6E4a0…80c4`](https://sepolia.etherscan.io/address/0x53d6E4a020DBB0c7950D785B081D02DB3F5D80c4#code) | Uniswap v4 hook. It checks both signatures, the ENS roles, the daily cap and the price band inside the swap, then takes the whole output for delivery |
+| 2 | `NidhiSwapRouter` | Ethereum Sepolia | [`0xAd97abe2…8990`](https://sepolia.etherscan.io/address/0xAd97abe2F1091E0d045A91E40f26AF09d5718990#code) | Sends the signed grant swap into the pool and tells the hook who the real executor is |
+| 3 | `NidhiDispatcher` | Ethereum Sepolia | [`0x673a2374…6e6D`](https://sepolia.etherscan.io/address/0x673a23742E3Fd4a236A19776574c14D1e5866e6D#code) | Sends the CCIP programmable token transfer, asks for 32 blocks (Faster-Than-Finality) and keeps the grant ledger |
+| 4 | `ENSv2Authority` | Ethereum Sepolia | [`0x92ceAa59…5600`](https://sepolia.etherscan.io/address/0x92ceAa59dfB8Ce4A85dCECFd26e50Ba58e375600#code) | Reads approver, auditor and guardian roles from `nidhi-dao.eth` and resolves grantee names per chain |
+| 5 | `NidhiBountyBoard` | Ethereum Sepolia | [`0xb8308A2D…dC5`](https://sepolia.etherscan.io/address/0xb8308A2DE6d090AD263e5D5d5102C71109fb9dC5#code) | On-chain milestones and open bounties; itself an ENS approver (ERC-1271) |
+| 6 | `DestinationReceiver` | Base Sepolia | [`0x48A03a48…49Ce`](https://sepolia.basescan.org/address/0x48A03a48F3B8a2AD7F83346b7Ee527773b6E49Ce#code) | Pays the grantee, holds and retries a failed payout, sends the receipt back, and accepts Faster-Than-Finality only from its own dispatcher |
+| 7 | `DestinationReceiver` | Arbitrum Sepolia | [`0x3aEB7253…a7a4`](https://sepolia.arbiscan.io/address/0x3aEB7253A4543f12404C8c13C2D44B0E4D97a7a4#code) | The same, on Arbitrum |
+
+### Per-chain stacks (role registry)
 
 | Chain | `NidhiHook` | `NidhiDispatcher` | `DestinationReceiver` | `RoleAuthority` |
 |---|---|---|---|---|
@@ -215,7 +227,7 @@ Four testnets, each running the full stack (hook, router, dispatcher, receiver),
 
 Lanes: Sepolia ⇄ Base, Sepolia ⇄ Arbitrum, Sepolia ⇄ Unichain, Base ⇄ Arbitrum, Arbitrum ⇄ Unichain.
 
-### ENSv2-gated stack and the milestone board (Sepolia)
+### Previous ENSv2 stack (v4), kept for the history of earlier grants (Sepolia)
 
 | Contract | Address | Role |
 |---|---|---|
