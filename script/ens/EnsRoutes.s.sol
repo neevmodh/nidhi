@@ -42,7 +42,7 @@ contract EnsRoutes is Script {
         // CCIP 2.0 Faster-Than-Finality: accept messages from this dispatcher after ALLOW_BLOCKS source blocks
         uint16 allow = uint16(vm.envOr("ALLOW_BLOCKS", uint256(0)));
         if (allow != 0) rx.setAllowedFinality(bytes4(uint32(allow)));
-        payable(address(rx)).transfer(vm.envOr("ACK_RESERVE_WEI", uint256(0.0015 ether)));
+        payable(address(rx)).transfer(vm.envOr("ACK_RESERVE_WEI", uint256(0.005 ether)));
         vm.stopBroadcast();
 
         string memory o = "rx";
