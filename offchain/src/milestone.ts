@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { parseAbi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { findMilestonePr, grantIdOf, milestoneRules, specHashOf } from "./lib.ts";
-import { MANDATE_TYPES, domain, fromJson, labelHash, poolKey, publicClient, sourceStack, toJson, zeroForOne } from "./stack.ts";
+import { MANDATE_TYPES, domain, fromJson, knownHooks, labelHash, poolKey, publicClient, sourceStack, toJson, zeroForOne } from "./stack.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -90,7 +90,8 @@ async function status() {
   const c = publicClient(s.chainId);
   for (const [id, m] of Object.entries<any>(file.milestones)) {
     const committed = fs.existsSync(mandatePath(id));
-    const used = await c.readContract({ address: s.hook, abi: parseAbi(["function grantUsed(bytes32) view returns (bool)"]), functionName: "grantUsed", args: [grantIdOf(id)] });
+    let used = false; // paid on any ENS stack, current or previous
+    for (const h of knownHooks()) used ||= await c.readContract({ address: h, abi: parseAbi(["function grantUsed(bytes32) view returns (bool)"]), functionName: "grantUsed", args: [grantIdOf(id)] });
     let pr = "no merged PR yet";
     try { const p = await findMilestonePr(m.repo, id); if (p) pr = `#${p.number} merged ${p.mergedAt}`; } catch (e: any) { pr = `GitHub: ${e.message.slice(0, 60)}`; }
     console.log(`${id.padEnd(4)} ${m.title.padEnd(34)} ${committed ? "committed" : "NOT committed"} | ${pr} | ${used ? "PAID" : "unpaid"}`);

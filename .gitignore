@@ -10,3 +10,5 @@ node_modules/
 
 # ui build output
 ui/dist/
+chainlink-ccip/
+documentation/

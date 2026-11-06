@@ -16,7 +16,7 @@ import {IGrantAuthority} from "../../src/interfaces/IGrantAuthority.sol";
 contract BountySetup is Script {
     function run() external {
         require(block.chainid == 11155111, "ENSv2 lives on Sepolia");
-        string memory stack = vm.readFile("deployments/ens-v4-stack.json");
+        string memory stack = vm.readFile(vm.envOr("STACK", string("deployments/ens-v4-stack.json")));
         string memory ens = vm.readFile("deployments/sepolia-ens.json");
         address hook = vm.parseJsonAddress(stack, ".hook");
         address authority = vm.parseJsonAddress(stack, ".authority");

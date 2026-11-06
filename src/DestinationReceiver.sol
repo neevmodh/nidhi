@@ -13,6 +13,7 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {ExtraArgsLib} from "./libraries/ExtraArgsLib.sol";
+import {FinalityCodec} from "@chainlink/contracts-ccip/contracts/libraries/FinalityCodec.sol";
 import {AckLib} from "./libraries/AckLib.sol";
 
 /// @title DestinationReceiver
@@ -49,6 +50,10 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     /// @notice Tokens this receiver will pay out (destination-chain representation). Add-only.
     mapping(address token => bool) public allowedToken;
     uint32 public ackGasLimit = 200_000;
+    /// @notice CCIP 2.0 Faster-Than-Finality: the weakest finality this receiver accepts from its known source
+    ///         dispatchers (FinalityCodec). bytes4(0) = full finality only (default). E.g. a block depth of 20 accepts
+    ///         messages requesting 20 or more source blocks. Messages from anyone else always need full finality.
+    bytes4 public allowedFinality;
     bool public payoutsPaused;
 
     mapping(bytes32 grantId => Payout) internal _payouts;
@@ -58,6 +63,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     mapping(bytes32 grantId => uint256) internal _queueIndex;
 
     event SourceAdded(uint64 indexed srcSelector, address dispatcher);
+    event AllowedFinalitySet(bytes4 finality);
     event TokenAllowed(address indexed token);
     event PayoutsPaused(bool paused);
     event GrantReceived(bytes32 indexed grantId, bytes32 indexed messageId, address recipient, uint256 amount);
@@ -89,6 +95,27 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     // ------------------------------------------------------------------ admin
 
     /// @notice Trust a NidhiDispatcher on a source chain. Add-only (no overwrite).
+    /// @notice Opt in to faster-than-finality delivery from known source dispatchers (bytes4(0) = finality only).
+    function setAllowedFinality(bytes4 finality) external onlyOwner {
+        allowedFinality = finality;
+        emit AllowedFinalitySet(finality);
+    }
+
+    /// @inheritdoc CCIPReceiver
+    /// @dev The default CCV is used. The relaxed finality applies only to messages from this receiver's known source
+    ///      dispatcher for that chain; everything else must wait for full finality.
+    function getCCVsAndFinalityConfig(uint64 sourceChainSelector, bytes calldata sender)
+        external
+        view
+        override
+        returns (address[] memory, address[] memory, uint8, bytes4)
+    {
+        bytes4 f = FinalityCodec.WAIT_FOR_FINALITY_FLAG;
+        address known = sourceDispatchers[sourceChainSelector];
+        if (known != address(0) && sender.length == 32 && abi.decode(sender, (address)) == known) f = allowedFinality;
+        return (new address[](0), new address[](0), 0, f);
+    }
+
     function addSource(uint64 srcSelector, address dispatcher_) external onlyOwner {
         if (sourceDispatchers[srcSelector] != address(0)) revert AlreadySet();
         if (dispatcher_ == address(0) || srcSelector == 0) revert ZeroAddress();
