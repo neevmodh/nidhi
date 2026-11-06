@@ -1,210 +1,310 @@
-# 3. Chainlink CCIP architecture in Nidhi
+# Chainlink CCIP 2.0 in Nidhi
 
 CCIP is Nidhi's **cross-chain settlement layer**. The hook captures the swap output on the source chain. CCIP carries that
-exact token amount, plus the grant data, to a receiver on the destination chain that pays the grantee. A second CCIP message
-travels back as a **receipt (ACK)** so the source ledger knows the grant is `SETTLED`.
+exact amount, together with the grant data, to a receiver on the grantee's chain, which pays them. A second CCIP message
+travels back as a **receipt**, so the source ledger knows the grant was paid and marks it `SETTLED`. A relay pays chains
+that have no direct lane.
 
-## 3.1 System view
+Contents: [1 system view](#1-system-view) · [2 the round trip](#2-the-full-round-trip) · [3 the messages](#3-what-goes-in-each-message) ·
+[4 the ledger](#4-the-source-ledger-only-moves-forward) · [5 the receiver never loses money](#5-the-receiver-never-loses-money) ·
+[6 multi-hop](#6-multi-hop-paying-a-chain-with-no-direct-lane) · [7 lanes and routing](#7-lanes-and-add-only-routing) ·
+[8 safety checks](#8-safety-checks-around-every-message) · [9 CCIP 2.0 specifics](#9-ccip-20-specifics-and-lessons-from-live-runs) ·
+[10 costs and timing](#10-costs-and-timing) · [11 live proof](#11-live-proof) · [12 code](#12-code)
+
+---
+
+## 1. System view
 
 ```mermaid
 flowchart LR
-  subgraph SRC["Source chain (e.g. Base)"]
-    HK["NidhiHook\nafterSwap capture"]
-    DS["NidhiDispatcher\nCCIPReceiver, owner = DAO admin\ndestReceivers[selector] add-only\nledger: grantId to status"]
-    RS["CCIP Router + RMN"]
+  subgraph SRC["Source chain"]
+    HK["NidhiHook<br/>captures the output"]
+    DS["NidhiDispatcher<br/>grant ledger, CCIP sender,<br/>receipt receiver"]
+    R1["CCIP Router"]
   end
-
-  subgraph DST["Destination chain (e.g. Arbitrum)"]
-    RD["CCIP Router + RMN"]
-    RX["DestinationReceiver\nCCIPReceiver, defensive\nsourceDispatchers[selector] add-only\nallowedToken allowlist"]
-    AUTO["Chainlink Automation\ncheckUpkeep / performUpkeep"]
-    GR(["Grantee wallet"])
+  subgraph DST["Grantee's chain"]
+    R2["CCIP Router"]
+    RX["DestinationReceiver<br/>pays, or holds and retries"]
+    AUTO["Automation queue<br/>checkUpkeep / performUpkeep"]
+    G(["Grantee"])
   end
-
-  HK -->|"take(out) + dispatch(mandate, out)"| DS
-  DS -->|"1 ccipSend: token + grant data, fee in native"| RS
-  RS ==>|"CCIP lane: DON commit and execute, RMN verifies"| RD
-  RD -->|"2 ccipReceive: token already delivered to receiver"| RX
-  RX -->|"3 safeTransfer(token, recipient, amount)"| GR
-  RX -->|"4 ccipSend ACK: no tokens, outcome"| RD
-  RD ==>|"CCIP lane back"| RS
-  RS -->|"5 ccipReceive ACK"| DS
-  AUTO -->|"drains the queue of held payouts and unsent ACKs"| RX
+  HK -->|"take + dispatch"| DS
+  DS -->|"1 tokens + grant data,<br/>fee in native"| R1
+  R1 ==>|"CCIP lane"| R2
+  R2 -->|"2 deliver"| RX
+  RX -->|"3 pay"| G
+  RX -->|"4 receipt (no tokens)"| R2
+  R2 ==>|"reverse lane"| R1
+  R1 -->|"5 SETTLED"| DS
+  AUTO -.-> RX
 ```
 
-Every chain deploys **both** sides (a dispatcher and a receiver), so any lane works in either direction, and the ACK always
-returns on the reverse lane.
+Every chain runs both halves (a dispatcher and a receiver), so any lane works in both directions and every receipt returns
+on the reverse lane.
 
-## 3.2 The full round trip
+---
+
+## 2. The full round trip
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant HK as NidhiHook
   participant DS as NidhiDispatcher (source)
-  participant RT as CCIP Router (source)
-  participant NET as CCIP network (DON + RMN)
-  participant RR as CCIP Router (destination)
+  participant R1 as CCIP Router (source)
+  participant NET as CCIP network
+  participant R2 as CCIP Router (destination)
   participant RX as DestinationReceiver
   actor G as Grantee
 
-  HK->>DS: dispatch(mandate, out) after take(out)
-  DS->>DS: checks: only hook, destReceivers[sel] set, m.destReceiver matches, grant status NONE, balance at least out
-  DS->>RT: getFee(destSelector, message)
-  DS->>DS: effects first: status = DISPATCHED, amount, token, recipient
-  DS->>RT: approve token, ccipSend{value: fee}(destSelector, message)
-  RT-->>DS: messageId
-  Note over DS: emits GrantDispatched(grantId, messageId, token, amount, recipient, fee)
-  RT->>NET: message + tokens (burn/lock in the token pool)
-  NET->>NET: commit, RMN blessing, execute
-  NET->>RR: deliver, token pool releases to the receiver
-  RR->>RX: ccipReceive(message)
-  RX->>RX: source == sourceDispatchers[sel], exactly 1 token, token allowlisted, amount == received
-  RX->>RX: duplicate guard, record payout, optimistic outcome = PAID
-  alt payout succeeds
-    RX->>G: token.safeTransfer(recipient, amount) via try this.executePayout
-    Note over RX: outcome stays PAID
-  else transfer reverts (blacklisted recipient, paused...)
-    Note over RX: outcome = HELD, tokens stay in the receiver, nothing reverts
+  HK->>DS: dispatch(mandate, amount), after take(amount)
+  DS->>DS: only the hook, route exists and matches the mandate, grant is new, balance covers it
+  DS->>R1: getFee(destination, message)
+  DS->>DS: record the grant as DISPATCHED (state before the external call)
+  DS->>R1: ccipSend{value: fee}(destination, message)
+  R1-->>DS: messageId
+  R1->>NET: tokens + data
+  NET->>NET: wait for source finality, verify, execute
+  NET->>R2: deliver, the token pool releases to the receiver
+  R2->>RX: ccipReceive(message)
+  RX->>RX: sender is the known dispatcher, one allowed token, amount matches
+  alt the transfer works
+    RX->>G: pay
+  else it reverts (paused, blocked address)
+    Note over RX: HELD: funds stay in the receiver, nothing reverts
   end
-  RX->>RR: ccipSend ACK(grantId, messageId, amount, outcome), no tokens, native fee
-  RR->>NET: ACK message
-  NET->>RT: deliver ACK
-  RT->>DS: ccipReceive(ACK)
-  DS->>DS: sender == destReceivers[sourceSelector], amount and destSelector match, monotonic transition
-  Note over DS: PAID or RECOVERED gives SETTLED, HELD gives HELD
+  RX->>R2: ccipSend receipt(grantId, messageId, amount, PAID or HELD)
+  R2->>NET: receipt
+  NET->>R1: deliver
+  R1->>DS: ccipReceive(receipt)
+  DS->>DS: sender is the known receiver, amount and chain match, move forward only
 ```
 
-## 3.3 What goes in the CCIP message
+---
+
+## 3. What goes in each message
 
 ```mermaid
 flowchart TB
-  subgraph FWD["Forward message: source to destination"]
-    F1["receiver = abi.encode(destReceivers[destSelector])"]
-    F2["data = AckLib.encodeGrant(grantId, recipient, amount)"]
-    F3["tokenAmounts = [ {tokenOut, amount} ]\nprogrammable token transfer"]
-    F4["feeToken = address(0)  native\nor an ERC-20 fee token"]
-    F5["extraArgs = GenericExtraArgsV2 tag 0x181dcf10\ngasLimit = destGasLimit, allowOutOfOrderExecution = true"]
+  subgraph FWD["Grant message: source to destination"]
+    F1["receiver = the destination's DestinationReceiver"]
+    F2["data = (grantId, recipient, amount)"]
+    F3["tokenAmounts = [ (payout token, amount) ]<br/>a programmable token transfer"]
+    F4["feeToken = native"]
+    F5["extraArgs = GenericExtraArgsV2<br/>(gas limit, allowOutOfOrderExecution = true)"]
   end
-  subgraph ACKM["Return message: destination to source"]
-    A1["receiver = abi.encode(sourceDispatchers[srcSelector])"]
-    A2["data = AckLib.encodeAck(grantId, sourceMessageId, amount, outcome)"]
-    A3["tokenAmounts = []  data only"]
-    A4["extraArgs gasLimit = ackGasLimit"]
+  subgraph ACK["Receipt: destination to source"]
+    A1["receiver = the source's NidhiDispatcher"]
+    A2["data = (grantId, source messageId, amount, outcome)"]
+    A3["tokenAmounts = [] (data only)"]
+    A4["extraArgs = the receipt's gas limit"]
   end
 ```
 
-Outcome codes carried in the ACK: `PAID`, `HELD`, `RECOVERED`.
+Receipt outcomes: `PAID`, `HELD`, `RECOVERED`.
 
-## 3.4 The grant ledger is monotonic
+---
+
+## 4. The source ledger only moves forward
 
 ```mermaid
 stateDiagram-v2
   direction LR
   [*] --> NONE
   NONE --> DISPATCHED: dispatch (hook only)
-  DISPATCHED --> SETTLED: ACK outcome PAID
-  DISPATCHED --> HELD: ACK outcome HELD
-  HELD --> SETTLED: ACK outcome PAID or RECOVERED
+  DISPATCHED --> SETTLED: receipt PAID
+  DISPATCHED --> HELD: receipt HELD
+  HELD --> SETTLED: receipt PAID or RECOVERED
   SETTLED --> [*]
-  note right of DISPATCHED
-    never goes backwards
-    a duplicate or out-of-order ACK reverts InvalidAck
-    flagStuck(grantId) only emits an event
-  end note
 ```
 
-## 3.5 Destination payout states and self-healing
+A receipt that would move a grant backwards, arrives twice, comes from an unknown sender, or names the wrong amount or chain
+is rejected. The receipt can even arrive in the same transaction as the send (local simulator); the message id is reconciled
+from whichever side lands first.
 
-The receiver never reverts a CCIP delivery, because a reverted message would need manual execution and the tokens would be
-stranded. It records the failure and heals later.
+---
+
+## 5. The receiver never loses money
+
+A reverted CCIP delivery would need manual execution, and the tokens would sit in limbo. So the receiver never reverts a
+delivery: it records a failure and heals later.
 
 ```mermaid
 stateDiagram-v2
   direction TB
   [*] --> RECEIVED: ccipReceive
-  RECEIVED --> PAID: transfer ok
-  RECEIVED --> HELD: transfer failed or payouts paused
-  HELD --> PAID: retryPayout(grantId) once the cause clears
-  HELD --> RECOVERED: recover(grantId, to) by owner
-  PAID --> ACK_SENT: ACK sent
-  HELD --> ACK_SENT: ACK sent
-  RECOVERED --> ACK_SENT: ACK sent
-  RECEIVED --> ACK_PENDING: ACK send failed, e.g. low fee balance
-  ACK_PENDING --> ACK_SENT: retryAck, sendAck or Automation
-  ACK_SENT --> [*]
+  RECEIVED --> PAID: transfer works
+  RECEIVED --> HELD: transfer fails, or payouts paused
+  HELD --> PAID: retryPayout (anyone, once the cause clears)
+  HELD --> RECOVERED: recover (DAO owner)
+  PAID --> RECEIPT_SENT
+  HELD --> RECEIPT_SENT
+  RECOVERED --> RECEIPT_SENT
+  RECEIVED --> RECEIPT_PENDING: receipt fails (low fee balance)
+  RECEIPT_PENDING --> RECEIPT_SENT: retryAck, or Automation
+  RECEIPT_SENT --> [*]
 ```
+
+Held payouts and unsent receipts go into a queue that Chainlink Automation can drain through `checkUpkeep` and
+`performUpkeep` (up to 10 per run). The owner can never sweep grant tokens: `withdrawFees` refuses them.
+
+---
+
+## 6. Multi-hop: paying a chain with no direct lane
+
+Chainlink's track description asks for exactly this: *send from chain A to chain B without worrying whether the lane
+exists*. Base Sepolia and Unichain Sepolia share no CCIP lane. `NidhiHopRelay` on Arbitrum Sepolia joins them.
 
 ```mermaid
 flowchart LR
-  Q["queue of grants that need work\nheld payouts and unsent ACKs\nMAX_BATCH = 10"] --> CU["checkUpkeep()\nview: any actionable item ?"]
-  CU -- "upkeepNeeded" --> PU["performUpkeep(performData)\nretryPayout then retryAck per item"]
-  PU --> Q
-  FUND["fee balance low"] -.->|"ACK stays pending, never lost"| Q
+  subgraph A["Base Sepolia"]
+    DS["hop stack dispatcher"]
+  end
+  subgraph V["Arbitrum Sepolia"]
+    RL["NidhiHopRelay"]
+  end
+  subgraph B["Unichain Sepolia"]
+    RX["DestinationReceiver"]
+    G(["grantee"])
+  end
+  DS ==>|"1 grant: tokens + data"| RL
+  RL ==>|"2 forward over the next lane"| RX
+  RX -->|"3 pay"| G
+  RX ==>|"4 receipt"| RL
+  RL ==>|"5 receipt, rewritten to the source's messageId"| DS
 ```
 
-Funds safety on the receiver: `withdrawFees` refuses allowlisted payout tokens, so an owner cannot sweep grant money.
+- **No existing contract changes.** To the source dispatcher, the relay *is* the destination receiver. To the final
+  receiver, the relay *is* the source dispatcher.
+- **The receipt still settles the source.** The relay rewrites the receipt to carry the source's own message id, which is
+  what the dispatcher matches.
+- **Nothing is lost if a hop fails.** A forward or a receipt that cannot be sent is parked; anyone can call `retryForward`
+  or `retryAck`.
+- **Hardened by the live run.** The relay forwards inside CCIP's delivery, so the source must give it enough gas (2,000,000
+  on CCIP 2.0 testnet on-ramps); the first live hop ran out at the default 600,000, parked safely, and was retried. The hop
+  script now sets the limits for every route.
 
-## 3.6 Lanes and routing across many chains
+```mermaid
+sequenceDiagram
+  autonumber
+  participant DS as Dispatcher (Base Sepolia)
+  participant RL as NidhiHopRelay (Arbitrum Sepolia)
+  participant RX as Receiver (Unichain Sepolia)
+  DS->>RL: CCIP grant, messageId M1
+  RL->>RL: sender is the known upstream, one allowed token, record (M1, amount)
+  RL->>RX: CCIP forward, messageId M2
+  RX->>RX: pay the grantee
+  RX->>RL: receipt (grantId, M2, PAID)
+  RL->>RL: M2 matches what it sent
+  RL->>DS: receipt (grantId, M1, PAID)
+  DS->>DS: SETTLED
+```
 
-Nidhi is **lane-aware and add-only**. A chain can only pay a destination that has a real CCIP lane, and a route can be added
-but never overwritten.
+---
+
+## 7. Lanes and add-only routing
+
+A grant can only go where Chainlink runs a lane, and a route, once added, can never be redirected.
 
 ```mermaid
 flowchart TB
-  REG[("chains/registry.json\ngenerated from Chainlink's chains, tokens and lanes API\nselector, router, rmn, payoutLanes, cursedAtGeneration")] --> D1
-  D1["Phase 1 Deploy, per chain\nrefuses if chain is not source-capable\nrefuses if the RMN is cursed right now\nfunds native fee reserve = 3 x live getFee"] --> D2
-  D2["Phase 2 Wire, idempotent\noutbound: dispatcher.addDestination(selector, receiver)\ninbound: receiver.addSource(selector, dispatcher)\nonly where a payout lane exists"] --> D3
-  D3["Phase 3 Handover\nOwnable2Step to the DAO admin, who calls acceptOwnership"]
+  REG[("chains/registry.json, chains/testnets.json<br/>generated from Chainlink's chains, tokens and lanes API,<br/>checked on-chain: router, selector, RMN, lanes")] --> D1
+  D1["Deploy, per chain<br/>refuses a chain whose RMN is cursed<br/>funds a fee reserve = 3 x the live fee"] --> D2
+  D2["Wire<br/>dispatcher.addDestination(chain, receiver)<br/>receiver.addSource(chain, dispatcher)<br/>only where a lane exists"] --> D3
+  D3["Handover<br/>Ownable2Step to the DAO admin"]
 ```
 
 ```mermaid
 flowchart LR
-  subgraph TN["Testnet lanes (CCIP-BnM), wired and live"]
-    SEP["Sepolia 11155111"]
-    BAS["Base Sepolia 84532"]
-    ARB["Arbitrum Sepolia 421614"]
-    UNI["Unichain Sepolia 1301"]
-    SEP <--> BAS
-    SEP <--> ARB
-    SEP <--> UNI
-    BAS <--> ARB
-    ARB <--> UNI
-  end
+  SEP["Sepolia"] <--> BAS["Base Sepolia"]
+  SEP <--> ARB["Arbitrum Sepolia"]
+  SEP <--> UNI["Unichain Sepolia"]
+  BAS <--> ARB
+  ARB <--> UNI
+  BAS -.->|"no lane: through the relay on Arbitrum"| UNI
 ```
 
-On mainnets the payout token is **USDC**, bridged by CCIP's USDC pools. 10 chains are source-capable, with 50 directed USDC
-lanes. The optimism, unichain and ink RMNs were **cursed at generation time**, so Deploy refuses them and rehearsals skip them.
+On mainnets the payout token is USDC through CCIP's USDC pools: 10 source-capable chains and 50 directed lanes, rehearsed on
+forks.
 
-## 3.7 Safety checks around every CCIP call
+---
+
+## 8. Safety checks around every message
 
 ```mermaid
 flowchart TD
-  subgraph SOURCE["Dispatcher, before ccipSend"]
-    S1["msg.sender == hook"] --> S2["destination configured and matches the mandate"]
-    S2 --> S3["grant not already dispatched"] --> S4["token balance at least amount"]
-    S4 --> S5["native balance at least live getFee"] --> S6["state written BEFORE the external call"]
+  subgraph S["Dispatcher, before sending"]
+    S1["caller is the hook"] --> S2["route exists and matches the mandate"]
+    S2 --> S3["grant is new"] --> S4["token balance covers the amount"]
+    S4 --> S5["native balance covers the live fee"] --> S6["state written before the external call"]
   end
-  subgraph DEST["Receiver, in ccipReceive"]
-    R1["sender == sourceDispatchers[sourceSelector]"] --> R2["exactly one token, on the allowlist"]
-    R2 --> R3["data amount == token amount delivered"] --> R4["no duplicate grantId"]
-    R4 --> R5["payout wrapped in try/catch, failure becomes HELD"]
+  subgraph D["Receiver, on delivery"]
+    D1["sender is the known source dispatcher"] --> D2["exactly one allowed token"]
+    D2 --> D3["data amount equals the delivered amount"] --> D4["grantId never seen"]
+    D4 --> D5["payout inside try/catch: a failure becomes HELD"]
   end
-  subgraph ACKCHK["Dispatcher, in ACK receive"]
-    A1["sender == destReceivers[sourceSelector]"] --> A2["no tokens attached"]
-    A2 --> A3["amount and destSelector match the grant"] --> A4["monotonic transition only"]
+  subgraph R["Dispatcher, on a receipt"]
+    R1["sender is the known receiver"] --> R2["no tokens attached"]
+    R2 --> R3["amount and chain match the grant"] --> R4["forward transitions only"]
   end
-  SOURCE ==> DEST ==> ACKCHK
+  S ==> D ==> R
 ```
 
-## 3.8 Cost model
+The RMN curse status is checked before deploying and shown live in the app.
 
-| Item | Who pays | How |
+---
+
+## 9. CCIP 2.0 specifics, and lessons from live runs
+
+- **CCIP 2.0 contracts.** The contracts build on Chainlink's current CCIP library, which includes the cross-chain verifier
+  configuration (`getCCVsAndFinalityConfig`). On the live testnet lanes, the token pools call `getRequiredCCVs` during fee
+  quoting, visible in our deployment traces.
+- **`GenericExtraArgsV2`** with `allowOutOfOrderExecution`, isolated in one library (`ExtraArgsLib`).
+- **Gas limits matter more than they look.** A receiver pays and sends a receipt inside its delivery; a relay sends a whole
+  new CCIP message inside its delivery. Destination gas limits are set per route (2,000,000 for hops, 1,500,000 for a final
+  receiver's receipt).
+- **Gas estimation and try/catch.** An estimator picks the lowest gas at which the outer call succeeds, and a failing send
+  inside try/catch still "succeeds". Manual retries need an explicit gas limit.
+- **Local simulator.** It delivers every hop in one transaction, so a two-hop test needs the whole route's gas in the first
+  hop, and a receipt can arrive before the send returns. The relay reconciles that order.
+
+---
+
+## 10. Costs and timing
+
+| | Who pays | How |
 |---|---|---|
-| Forward CCIP fee | the dispatcher, per grant | native token, quoted live with `getFee` before sending |
-| ACK CCIP fee | the destination receiver, per grant | native token, from its own reserve |
-| Reserve sizing | the deployer at Deploy | 3 messages' worth of `getFee` on each side |
-| Low reserve | nothing is lost | the ACK waits in the queue and Automation or `retryAck` sends it once funded |
+| Grant message | the source dispatcher | native token, quoted live with `getFee` |
+| Receipt | the destination receiver | native token, from its own reserve |
+| Hop forward and relayed receipt | the relay | native token, from its reserve |
+| Reserve sizing | the deployer | 3 messages' worth of the live fee per side |
 
-One grant therefore costs two CCIP messages. Fees are small on L2s and noticeably larger from Ethereum mainnet, and Monad's fee
-is hundreds of MON because the unit price of MON is low.
+A direct grant costs two CCIP messages; a two-hop grant costs four. On testnets a grant takes about 15–25 minutes to reach
+the grantee and 30–40 minutes to settle, mostly waiting for source-chain finality.
+
+---
+
+## 11. Live proof
+
+| Route | Evidence |
+|---|---|
+| Base Sepolia → Arbitrum Sepolia, settled | [CCIP](https://ccip.chain.link/msg/0x60433b4f9215063950bde9736f3618766fdbbdde7f43e895dba724fc3d2faf7e) · [payout](https://sepolia.arbiscan.io/tx/0x74c5f98f165389683c3201ce3b283e63e9965eaed03c5faed8d389e8f6d3c21c) |
+| Sepolia → Base Sepolia, settled | [CCIP](https://ccip.chain.link/msg/0x9c3ddac23e4af71f197c9b71b36b36f11fdbc8068e25c8c6d36468d65ff1fdfa) · [payout](https://sepolia.basescan.org/tx/0xf3e05ffddcbd9e86ca12ae3c84783a1f1482824613f4ed6cbdf9449e1d628294) |
+| ENS-gated Sepolia → Base Sepolia, settled | [CCIP](https://ccip.chain.link/msg/0xe5721859a03a43697d7ce3b2c5fcd8a73a5d5c9ed881ab34db33edb4ccba17a2) |
+| **Multi-hop** Base Sepolia → Arbitrum Sepolia → Unichain Sepolia, settled | [swap](https://sepolia.basescan.org/tx/0x47c75cf9e20812733516d2a5642f39111a476efc2b8af1f569dbb6480cc14168) · [relay forward](https://sepolia.arbiscan.io/tx/0xeab38417c58e402c2d7e9c5f3491d0adbb1217bb44ebef1aa2e4ed11c1c8977f) |
+| Agent milestone payout, Sepolia → Base Sepolia | [payout swap](https://sepolia.etherscan.io/tx/0xb8f24e16f4fe2bfa71d205e3ac48d13541a7a42ff0d35abbd8b5a9119408cfaf) |
+
+---
+
+## 12. Code
+
+| What | Where |
+|---|---|
+| Send | [`NidhiDispatcher.dispatch`](../../src/NidhiDispatcher.sol#L120) |
+| Receipt in | [`NidhiDispatcher._ccipReceive`](../../src/NidhiDispatcher.sol#L182) |
+| Delivery, hold, retry, recover | [`DestinationReceiver._ccipReceive`](../../src/DestinationReceiver.sol#L119) · [`retryPayout`](../../src/DestinationReceiver.sol#L165) · [`recover`](../../src/DestinationReceiver.sol#L180) · [`sendAck`](../../src/DestinationReceiver.sol#L211) |
+| Automation | [`checkUpkeep`](../../src/DestinationReceiver.sol#L263) · [`performUpkeep`](../../src/DestinationReceiver.sol#L277) |
+| Multi-hop | [`NidhiHopRelay`](../../src/NidhiHopRelay.sol): [`_onGrant`](../../src/NidhiHopRelay.sol#L134) · [`_onAck`](../../src/NidhiHopRelay.sol#L152) · [`retryForward`](../../src/NidhiHopRelay.sol#L235) |
+| Message encoding | [`AckLib`](../../src/libraries/AckLib.sol) · [`ExtraArgsLib`](../../src/libraries/ExtraArgsLib.sol) |
+| Routes | [`script/mainnet/Wire.s.sol`](../../script/mainnet/Wire.s.sol) · [`script/hop/HopRoute.s.sol`](../../script/hop/HopRoute.s.sol) |
+| Tests | [`NidhiFlow.t.sol`](../../test/unit/NidhiFlow.t.sol) · [`EdgeCases.t.sol`](../../test/unit/EdgeCases.t.sol) · [`HopRelay.t.sol`](../../test/unit/HopRelay.t.sol) · [`NidhiInvariant.t.sol`](../../test/invariant/NidhiInvariant.t.sol) |

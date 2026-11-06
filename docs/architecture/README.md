@@ -1,20 +1,21 @@
-# Nidhi architecture diagrams
+# Nidhi architecture
 
-Three Mermaid diagram sets, one per technology. GitHub renders them directly. Each file has a system view, a sequence view
-and a state or decision view, drawn from the contract code in `src/`.
+One deep dive per protocol, plus the agent. Each has system, sequence and state diagrams (Mermaid, rendered by GitHub),
+live addresses, proof transactions and links to the exact code.
 
-| File | Layer | Answers |
+| Document | Layer | Answers |
 |---|---|---|
-| [01-ens.md](01-ens.md) | Identity and permissions | Who may approve, audit and pause, and where does `alice.dao.eth` get paid? |
-| [02-uniswap-v4.md](02-uniswap-v4.md) | Execution and enforcement | How does a swap become a mandate-checked grant that captures its own output? |
-| [03-chainlink-ccip.md](03-chainlink-ccip.md) | Cross-chain settlement | How do the funds reach another chain, and how does the source learn it was paid? |
+| [01-ens.md](01-ens.md) | **ENSv2**: identity and permissions | Who may approve, audit and pause? Where is `alice.nidhi-dao.eth` paid on each chain? How does the agent get a name? |
+| [02-uniswap-v4.md](02-uniswap-v4.md) | **Uniswap v4**: execution and enforcement | How does a swap become a checked grant that captures its own output? |
+| [03-chainlink-ccip.md](03-chainlink-ccip.md) | **Chainlink CCIP 2.0**: cross-chain settlement | How does the money reach another chain, how does the source learn it was paid, and how is a chain with no lane reached? |
+| [04-milestone-agent.md](04-milestone-agent.md) | **The milestone agent** | How does a merged PR become a payout, and why can the agent not misbehave? |
 
-How they connect: **ENS** answers "who is allowed", the **Uniswap v4 hook** enforces it inside the swap and captures the output,
-and **CCIP** moves it and returns a receipt.
+How they fit together:
 
 ```mermaid
 flowchart LR
-  ENS["ENS / RoleAuthority\nwho is allowed, where to pay"] -->|"roles and payee"| HK["Uniswap v4 hook\nenforce and capture"]
-  HK -->|"captured output + grant data"| CCIP["Chainlink CCIP\ndeliver and acknowledge"]
-  CCIP -->|"ACK: SETTLED"| HK
+  ENS["ENSv2<br/>who is allowed, who is paid"] -->|"roles and payee"| HK["Uniswap v4 hook<br/>enforce and capture"]
+  AG["Milestone agent<br/>verifies the work"] -->|"signed attestation"| HK
+  HK -->|"output + grant data"| CCIP["Chainlink CCIP 2.0<br/>deliver and acknowledge"]
+  CCIP -->|"receipt: SETTLED"| HK
 ```
