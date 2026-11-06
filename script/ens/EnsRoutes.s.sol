@@ -18,7 +18,8 @@ contract EnsRoutes is Script {
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(pk);
-        string memory stack = vm.readFile("deployments/ens-v4-stack.json");
+        // STACK / RX_PREFIX select which ENS stack (v4 default; v5 is the CCIP 2.0 faster-than-finality stack)
+        string memory stack = vm.readFile(vm.envOr("STACK", string("deployments/ens-v4-stack.json")));
         address dispatcher = vm.parseJsonAddress(stack, ".dispatcher");
         string memory reg = vm.readFile("chains/testnets.json");
 
@@ -38,6 +39,9 @@ contract EnsRoutes is Script {
         DestinationReceiver rx = new DestinationReceiver(router, address(0), deployer);
         rx.allowToken(payout);
         rx.addSource(SEPOLIA_SEL, dispatcher);
+        // CCIP 2.0 Faster-Than-Finality: accept messages from this dispatcher after ALLOW_BLOCKS source blocks
+        uint16 allow = uint16(vm.envOr("ALLOW_BLOCKS", uint256(0)));
+        if (allow != 0) rx.setAllowedFinality(bytes4(uint32(allow)));
         payable(address(rx)).transfer(vm.envOr("ACK_RESERVE_WEI", uint256(0.0015 ether)));
         vm.stopBroadcast();
 
@@ -45,17 +49,25 @@ contract EnsRoutes is Script {
         vm.serializeUint(o, "chainId", block.chainid);
         vm.serializeAddress(o, "sourceDispatcher", dispatcher);
         string memory json = vm.serializeAddress(o, "receiver", address(rx));
-        vm.writeJson(json, string.concat("deployments/ens-v4-receiver-", vm.toString(block.chainid), ".json"));
+        vm.writeJson(json, string.concat(_prefix(), vm.toString(block.chainid), ".json"));
         console2.log("ENS-stack receiver", address(rx));
     }
 
+    function _prefix() internal view returns (string memory) {
+        return vm.envOr("RX_PREFIX", string("deployments/ens-v4-receiver-"));
+    }
+
     function _add(address dispatcher, uint64 sel, uint256 id) internal {
-        address rx = vm.parseJsonAddress(
-            vm.readFile(string.concat("deployments/ens-v4-receiver-", vm.toString(id), ".json")), ".receiver"
-        );
+        address rx = vm.parseJsonAddress(vm.readFile(string.concat(_prefix(), vm.toString(id), ".json")), ".receiver");
         if (NidhiDispatcher(payable(dispatcher)).destReceivers(sel) == address(0)) {
             NidhiDispatcher(payable(dispatcher)).addDestination(sel, rx);
             console2.log("route added to", id);
+        }
+        // CCIP 2.0 Faster-Than-Finality: request REQUEST_BLOCKS source blocks instead of full finality
+        uint16 req = uint16(vm.envOr("REQUEST_BLOCKS", uint256(0)));
+        if (req != 0 && NidhiDispatcher(payable(dispatcher)).requestedFinality(sel) != bytes4(uint32(req))) {
+            NidhiDispatcher(payable(dispatcher)).setRequestedFinality(sel, bytes4(uint32(req)));
+            console2.log("faster-than-finality blocks", req);
         }
     }
 }

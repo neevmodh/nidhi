@@ -396,6 +396,6 @@ CI runs formatting, the build, all tests, a gas snapshot and an independent re-v
 - **ENSv2 is on Sepolia.** The ENS-gated stack and the milestone board live on Sepolia; other chains use the same hook with `RoleAuthority`.
 - **Chainlink Automation** is implemented in the receiver but not registered on testnet (it needs LINK). **Data Feeds, CRE and VRF** are not used.
 - **The agent's keys live in GitHub Actions secrets** (testnet keys). Its power is bounded by the hook, the board, the cap, the guardian and ENS revocation, as described in section 6.
-- **CCIP on testnets takes 15–40 minutes** to settle, mostly waiting for source-chain finality.
+- **CCIP on testnets takes 15–40 minutes** to settle, mostly waiting for source-chain finality. The v5 ENS stack uses CCIP 2.0 Faster-Than-Finality: it requests 32 blocks on Sepolia lanes, the minimum those lanes accept. Receivers accept 20 or more blocks, and only from their own dispatcher. Receipts from Base and Arbitrum still wait for finality, because those lanes allow nothing else.
 
 More detail: [ARCHITECTURE.md](ARCHITECTURE.md) · [SECURITY.md](SECURITY.md) · [FEEDBACK.md](FEEDBACK.md) · [DEMO.md](DEMO.md)

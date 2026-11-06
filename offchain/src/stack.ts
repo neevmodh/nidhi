@@ -30,13 +30,22 @@ export interface SourceStack {
   selectors: Record<string, bigint>;
 }
 
+/** the newest ENS-gated stack: v5 (CCIP 2.0 faster-than-finality) when deployed, else v4 */
+export const ensVersion = () => (fs.existsSync(path.join(repoRoot, "deployments", "ens-v5-stack.json")) ? "v5" : "v4");
+
+/** every ENS-gated hook ever deployed: a milestone used on ANY of them is paid, never pay it again */
+export function knownHooks(): Address[] {
+  return ["v5", "v4"].map((v) => path.join(repoRoot, "deployments", `ens-${v}-stack.json`)).filter((f) => fs.existsSync(f)).map((f) => JSON.parse(fs.readFileSync(f, "utf8")).hook);
+}
+
 export function sourceStack(): SourceStack {
   const reg = read("chains/testnets.json").chains;
-  const s = read("deployments/ens-v4-stack.json");
+  const v = ensVersion();
+  const s = read(`deployments/ens-${v}-stack.json`);
   const id = Number(s.chainId);
   const receivers: Record<string, Address> = {};
   for (const r of ["84532", "421614"]) {
-    const f = path.join(repoRoot, "deployments", `ens-v4-receiver-${r}.json`);
+    const f = path.join(repoRoot, "deployments", `ens-${v}-receiver-${r}.json`);
     if (fs.existsSync(f)) receivers[r] = JSON.parse(fs.readFileSync(f, "utf8")).receiver;
   }
   const selectors: Record<string, bigint> = {};

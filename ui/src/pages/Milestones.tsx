@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { parseAbiItem, parseEventLogs, type Address, type Hex } from "viem";
-import { addrUrl, chainById, client, stackOf, txUrl } from "../lib/chains";
+import { addrUrl, chainById, client, stackOf, stacksOf, txUrl } from "../lib/chains";
 import { contractLogs } from "../lib/logcache";
 import { amount, ago, short } from "../lib/format";
 import data from "../data/milestones.json";
@@ -61,18 +61,22 @@ function usePr(repo: string, id: string) {
 /** did the agent verify (hook GrantAuthorized) and how far did the payout get (dispatcher status) */
 function useOnChain(grantId: Hex | null) {
   const src = chainById((data as any).source?.chainId ?? 11155111)!;
-  const stack = stackOf(src, (data as any).source?.stack ?? "ens");
+  // every ENS-gated stack, newest first: a milestone may have been paid by an earlier one
+  const stacks = stacksOf(src).filter((s) => s.kind === ((data as any).source?.stack ?? "ens"));
   return useQuery({
     queryKey: ["milestone-chain", grantId],
-    enabled: !!grantId && !!stack,
+    enabled: !!grantId && stacks.length > 0,
     refetchInterval: 30_000,
     queryFn: async () => {
-      const [logs, status] = await Promise.all([
-        contractLogs(src.id, stack.hook, stack.fromBlock),
-        client(src.id).readContract({ address: stack.dispatcher, abi: statusAbi, functionName: "statusOf", args: [grantId!] }),
-      ]);
-      const auth = (parseEventLogs({ abi: [authorized], logs, args: { grantId: grantId! } as any, strict: false }) as any[])[0];
-      return { auditor: auth?.args?.auditor as Address | undefined, tx: auth?.transactionHash as Hex | undefined, status: Number(status), src };
+      for (const stack of stacks) {
+        const [logs, status] = await Promise.all([
+          contractLogs(src.id, stack.hook, stack.fromBlock),
+          client(src.id).readContract({ address: stack.dispatcher, abi: statusAbi, functionName: "statusOf", args: [grantId!] }),
+        ]);
+        const auth = (parseEventLogs({ abi: [authorized], logs, args: { grantId: grantId! } as any, strict: false }) as any[])[0];
+        if (auth || Number(status) > 0) return { auditor: auth?.args?.auditor as Address | undefined, tx: auth?.transactionHash as Hex | undefined, status: Number(status), src };
+      }
+      return { auditor: undefined, tx: undefined, status: 0, src };
     },
   });
 }

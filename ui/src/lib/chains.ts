@@ -122,9 +122,9 @@ export function stacksOf(c: ChainInfo): Stack[] {
   if (!d) return [];
   const out: Stack[] = [{ kind: "roles", label: "RoleAuthority", hook: d.hook, router: d.router, dispatcher: d.dispatcher, authority: d.authority, poolId: d.poolId, positionId: d.positionId, fromBlock: d.fromBlock, lanes: c.lanes }];
   const e = (d as any).ens;
-  if (e?.stack) {
-    const s = e.stack;
-    out.push({ kind: "ens", label: "ENSv2 · nidhi-dao.eth", hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: s.receivers, lanes: Object.keys(s.receivers ?? {}).map(Number) as ChainId[] });
+  // the current ENS stack first (stackOf picks it), then earlier ones, still read for their history
+  for (const [i, s] of [e?.stack, ...(e?.previous ?? [])].filter(Boolean).entries()) {
+    out.push({ kind: "ens", label: i === 0 ? "ENSv2 · nidhi-dao.eth" : `ENSv2 · nidhi-dao.eth (${s.version ?? "earlier"})`, hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: s.receivers, lanes: Object.keys(s.receivers ?? {}).map(Number) as ChainId[] });
   }
   const h = (d as any).hop;
   if (h?.stack && h?.route) {

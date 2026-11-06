@@ -12,6 +12,7 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import {Mandate} from "./libraries/Mandate.sol";
 import {ExtraArgsLib} from "./libraries/ExtraArgsLib.sol";
+import {FinalityCodec} from "@chainlink/contracts-ccip/contracts/libraries/FinalityCodec.sol";
 import {AckLib} from "./libraries/AckLib.sol";
 import {INidhiDispatcher} from "./interfaces/INidhiDispatcher.sol";
 
@@ -54,6 +55,10 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     /// @notice destination chain selector => DestinationReceiver there. Add-only: an entry can never be changed.
     mapping(uint64 destSelector => address receiver) public destReceivers;
     uint32 public destGasLimit = 600_000;
+    /// @notice CCIP 2.0 Faster-Than-Finality per destination: the finality this dispatcher requests (FinalityCodec).
+    ///         bytes4(0) = wait for full source finality (default). A block depth must be at least the lane token
+    ///         pool's minimum and allowed by the destination receiver, or the message fails on execution.
+    mapping(uint64 destSelector => bytes4 finality) public requestedFinality;
     /// @notice Grants still DISPATCHED after this long can be flagged (CCIP's executor retries for ~8h).
     uint64 public constant STUCK_AFTER = 6 hours;
 
@@ -62,6 +67,7 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     event HookSet(address hook);
     event DestinationAdded(uint64 indexed destSelector, address receiver);
     event DestGasLimitSet(uint32 gasLimit);
+    event RequestedFinalitySet(uint64 indexed destSelector, bytes4 finality);
     event GrantDispatched(
         bytes32 indexed grantId,
         bytes32 indexed messageId,
@@ -107,6 +113,13 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
         if (receiver_ == address(0) || destSelector == 0) revert ZeroAddress();
         destReceivers[destSelector] = receiver_;
         emit DestinationAdded(destSelector, receiver_);
+    }
+
+    /// @notice Request faster-than-finality delivery to `destSelector` (bytes4(0) restores full finality).
+    function setRequestedFinality(uint64 destSelector, bytes4 finality) external onlyOwner {
+        FinalityCodec._validateRequestedFinality(finality);
+        requestedFinality[destSelector] = finality;
+        emit RequestedFinalitySet(destSelector, finality);
     }
 
     function setDestGasLimit(uint32 gasLimit_) external onlyOwner {
@@ -173,7 +186,7 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
             data: AckLib.encodeGrant(m.grantId, m.recipient, amount),
             tokenAmounts: tokens,
             feeToken: feeToken,
-            extraArgs: ExtraArgsLib.encode(destGasLimit)
+            extraArgs: ExtraArgsLib.encode(destGasLimit, requestedFinality[m.destChainSelector])
         });
     }
 

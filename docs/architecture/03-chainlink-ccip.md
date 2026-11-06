@@ -260,6 +260,18 @@ The RMN curse status is checked before deploying and shown live in the app.
   configuration (`getCCVsAndFinalityConfig`). On the live testnet lanes, the token pools call `getRequiredCCVs` during fee
   quoting, visible in our deployment traces.
 - **`GenericExtraArgsV2`** with `allowOutOfOrderExecution`, isolated in one library (`ExtraArgsLib`).
+- **Faster-Than-Finality (FTF), CCIP 2.0.** By default a message waits for full source finality. CCIP 2.0 lets the
+  sender ask for a block depth instead (`GenericExtraArgsV3`, `FinalityCodec`), but only if the receiver opts in.
+  Otherwise the message is accepted at send time and then fails on execution. Nidhi does both halves:
+  - `NidhiDispatcher.setRequestedFinality(destSelector, depth)` is per lane and owner-only. With nothing set it sends the
+    old V2 bytes, unchanged.
+  - `DestinationReceiver.setAllowedFinality(depth)` controls what `getCCVsAndFinalityConfig` returns. It allows the
+    shallower depth **only for its own known source dispatcher**. Every other sender, and every unknown chain, still gets
+    full finality.
+  - Each lane sets its own minimum depth. Live checks: Sepolia → Base and Sepolia → Arbitrum require at least 32 blocks;
+    Unichain → Arbitrum accepts 20. Lanes sourced from Base or Arbitrum are finality-only. The v5 ENS stack therefore
+    asks for 32 blocks on its Sepolia lanes (about 6.4 min instead of about 15 min for finality), and its receivers accept 20 or more.
+  - Tests: `test/unit/FasterThanFinality.t.sol`.
 - **Gas limits matter more than they look.** A receiver pays and sends a receipt inside its delivery; a relay sends a whole
   new CCIP message inside its delivery. Destination gas limits are set per route (2,000,000 for hops, 1,500,000 for a final
   receiver's receipt).
@@ -280,7 +292,9 @@ The RMN curse status is checked before deploying and shown live in the app.
 | Reserve sizing | the deployer | 3 messages' worth of the live fee per side |
 
 A direct grant costs two CCIP messages; a two-hop grant costs four. On testnets a grant takes about 15–25 minutes to reach
-the grantee and 30–40 minutes to settle, mostly waiting for source-chain finality.
+the grantee and 30–40 minutes to settle, mostly waiting for source-chain finality. With Faster-Than-Finality (the v5 ENS
+stack, 32 blocks on Sepolia) the outbound leg waits about 6.4 minutes of blocks instead of finality. The receipt leg from
+Base or Arbitrum still waits for finality, because those lanes allow nothing else.
 
 ---
 

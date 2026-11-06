@@ -23,7 +23,7 @@ import { sepolia } from "viem/chains";
 import { evaluateRubric, fetchEvidence, findMilestonePr, hashJson, hashText } from "./lib.ts";
 import { runJury } from "./llm/jury.ts";
 import { loadMilestones, mandatePath, readMandate } from "./milestone.ts";
-import { ATTESTATION_TYPES, MANDATE_TYPES, MAX_SQRT, MIN_SQRT, RPCS, transport, domain, hookData, poolKey, publicClient, repoRoot, sourceStack, toJson, zeroForOne } from "./stack.ts";
+import { ATTESTATION_TYPES, MANDATE_TYPES, MAX_SQRT, MIN_SQRT, RPCS, knownHooks, transport, domain, hookData, poolKey, publicClient, repoRoot, sourceStack, toJson, zeroForOne } from "./stack.ts";
 import { boardAbi, boardDeployment, bountySpecHash, ensureContributorName, githubOf, readBounties, validLabel, type BoardBounty } from "./bounty.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +40,13 @@ const routerAbi = [{
     { name: "hookData", type: "bytes" }, { name: "deadline", type: "uint256" }],
   outputs: [{ name: "delta", type: "int256" }],
 }] as const;
+
+/** paid if ANY ENS-gated hook (v4, v5, ...) has used this grantId: a redeploy must never pay a milestone twice */
+async function usedAnywhere(grantId: Hex): Promise<boolean> {
+  const pub = publicClient(11155111);
+  for (const h of knownHooks()) if (await pub.readContract({ address: h, abi: hookAbi, functionName: "grantUsed", args: [grantId] })) return true;
+  return false;
+}
 
 const log = (id: string, msg: string) => console.log(`[agent] ${id.padEnd(3)} ${msg}`);
 
@@ -64,7 +71,7 @@ async function handle(id: string, m: any, base: any, dryRun: boolean) {
   const s = sourceStack();
   const pub = publicClient(s.chainId);
   if (md.hook.toLowerCase() !== s.hook.toLowerCase()) return log(id, "mandate was signed for a different hook: re-commit it");
-  if (await pub.readContract({ address: s.hook, abi: hookAbi, functionName: "grantUsed", args: [md.mandate.grantId] })) return log(id, "already paid");
+  if (await usedAnywhere(md.mandate.grantId)) return log(id, "already paid");
   if (Number(md.mandate.deadline) < Date.now() / 1000) return log(id, "mandate expired: the DAO must re-commit it");
 
   const pr = await findMilestonePr(m.repo, id);
@@ -146,7 +153,7 @@ async function handleBounty(b: BoardBounty, base: any, dryRun: boolean) {
   const board = boardDeployment();
   const bt = b.bounty;
   if (b.cancelled) return log(id, "cancelled by the DAO");
-  if (await pub.readContract({ address: s.hook, abi: hookAbi, functionName: "grantUsed", args: [b.grantId] })) return log(id, "already paid");
+  if (await usedAnywhere(b.grantId)) return log(id, "already paid");
   if (Number(bt.deadline) < Date.now() / 1000) return log(id, "expired");
   if (String(board.hook).toLowerCase() !== s.hook.toLowerCase()) return log(id, "board is bound to another hook");
   // the text shown to developers must be exactly what the poster committed to on-chain

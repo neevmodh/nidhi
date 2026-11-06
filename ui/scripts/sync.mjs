@@ -49,9 +49,10 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
 }
 // ---- ENSv2-gated source stack on Sepolia (deployments/ens-v4*.json), attached to the Sepolia deployment
 {
-  const stackPath = path.join(repo, "deployments", "ens-v4-stack.json");
-  const idPath = path.join(repo, "deployments", "ens-v4.json");
-  if (fs.existsSync(stackPath) && fs.existsSync(idPath) && deployments["11155111"]) {
+  // v5 = the CCIP 2.0 faster-than-finality stack (current, when deployed); v4 stays readable as "previous"
+  const loadStack = (v) => {
+    const stackPath = path.join(repo, "deployments", `ens-${v}-stack.json`);
+    if (!fs.existsSync(stackPath)) return null;
     const stack = readJson(stackPath);
     if (stack.fromBlock === undefined) {
       const bc = path.join(repo, "broadcast", "Deploy.s.sol", "11155111", "run-latest.json");
@@ -61,13 +62,20 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
     }
     const receivers = {};
     for (const id of ["84532", "421614"]) {
-      const f = path.join(repo, "deployments", `ens-v4-receiver-${id}.json`);
+      const f = path.join(repo, "deployments", `ens-${v}-receiver-${id}.json`);
       if (fs.existsSync(f)) receivers[id] = readJson(f).receiver;
     }
+    return { ...stack, receivers, version: v };
+  };
+  const idPath = path.join(repo, "deployments", "ens-v4.json");
+  const current = loadStack("v5") ?? loadStack("v4");
+  const previous = current?.version === "v5" ? [loadStack("v4")].filter(Boolean) : [];
+  if (current && fs.existsSync(idPath) && deployments["11155111"]) {
     const v3 = readJson(path.join(repo, "deployments", "sepolia-ens.json"));
     const subs = readJson(path.join(repo, "deployments", "sepolia-subnames.json"));
     deployments["11155111"].ens = {
-      stack: { ...stack, receivers },
+      stack: current,
+      previous,
       identity: { ...readJson(idPath), daoResolver: v3.resolver, approver: v3.approver, auditor: v3.auditor, auditorName: subs.auditor },
     };
   }
