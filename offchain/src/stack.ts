@@ -10,7 +10,8 @@ export const repoRoot = path.resolve(here, "..", "..");
 const read = (p: string) => JSON.parse(fs.readFileSync(path.join(repoRoot, p), "utf8"));
 
 export const RPCS: Record<number, string[]> = {
-  11155111: [process.env.SEPOLIA_RPC_URL ?? "", "https://ethereum-sepolia-rpc.publicnode.com", "https://sepolia.gateway.tenderly.co"].filter(Boolean),
+  // public RPCs first; a configured private RPC is a fallback, so its rate limits never block a payout
+  11155111: ["https://ethereum-sepolia-rpc.publicnode.com", process.env.SEPOLIA_RPC_URL ?? "", "https://sepolia.gateway.tenderly.co"].filter(Boolean),
   84532: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
   421614: ["https://sepolia-rollup.arbitrum.io/rpc", "https://arbitrum-sepolia-rpc.publicnode.com"],
 };
@@ -47,8 +48,9 @@ export function sourceStack(): SourceStack {
   };
 }
 
-export const publicClient = (chainId: number) =>
-  createPublicClient({ transport: fallback(RPCS[chainId].map((u) => http(u, { timeout: 20_000, retryCount: 2 }))) });
+/** every RPC for a chain, tried in order, with retries: used for reads AND for sending transactions */
+export const transport = (chainId: number) => fallback(RPCS[chainId].map((u) => http(u, { timeout: 20_000, retryCount: 2 })));
+export const publicClient = (chainId: number) => createPublicClient({ transport: transport(chainId) });
 
 export const domain = (s: SourceStack) => ({ name: "Nidhi", version: "1", chainId: s.chainId, verifyingContract: s.hook });
 

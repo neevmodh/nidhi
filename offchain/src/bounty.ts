@@ -5,7 +5,7 @@ import { createWalletClient, encodeFunctionData, http, keccak256, parseAbi, pars
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { hashJson } from "./lib.ts";
-import { RPCS, publicClient, repoRoot } from "./stack.ts";
+import { RPCS, publicClient, repoRoot, transport } from "./stack.ts";
 
 const read = (p: string) => JSON.parse(fs.readFileSync(path.join(repoRoot, p), "utf8"));
 export const boardDeployment = () => {
@@ -97,7 +97,7 @@ export async function ensureContributorName(login: string, wallet: Address, payT
 
   const key = process.env.PRIVATE_KEY as Hex;
   const account = privateKeyToAccount(key);
-  const w = createWalletClient({ chain: sepolia, transport: http(RPCS[11155111][0]), account });
+  const w = createWalletClient({ chain: sepolia, transport: transport(11155111), account });
   const send = async (what: string, p: Promise<Hex>) => { const h = await p; await pub.waitForTransactionReceipt({ hash: h }); log(`  ens ${what}: ${h}`); return h; };
   const init = encodeFunctionData({ abi: resolverAbi, functionName: "initialize", args: [[
     { account: account.address, roleBitmap: ROLE_SET_ADDRESS | (ROLE_SET_ADDRESS << ADMIN) | ROLE_SET_TEXT | (ROLE_SET_TEXT << ADMIN) },

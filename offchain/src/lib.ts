@@ -116,7 +116,9 @@ export async function fetchEvidence(repo: string, pr: number): Promise<{ evidenc
       .map((f) => ({ filename: f.filename, status: f.status, additions: f.additions, deletions: f.deletions, sha: f.sha }))
       .sort((a, b) => a.filename.localeCompare(b.filename)),
     approvals: reviews.filter((r) => r.state === "APPROVED").length,
+    // the agent's own run reports as a check on the same commit: it is not evidence about the work
     checks: (checks.check_runs ?? [])
+      .filter((c: any) => c.name !== "agent")
       .map((c: any) => ({ name: c.name, conclusion: c.conclusion }))
       .sort((a: any, b: any) => a.name.localeCompare(b.name)),
   };

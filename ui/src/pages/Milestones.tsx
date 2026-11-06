@@ -43,7 +43,7 @@ function usePr(repo: string, id: string) {
         gh(`/repos/${repo}/pulls/${p.number}/reviews?per_page=100`),
         gh(`/repos/${repo}/commits/${p.head.sha}/check-runs?per_page=100`),
       ]);
-      const runs: any[] = checks.check_runs ?? [];
+      const runs: any[] = (checks.check_runs ?? []).filter((c: any) => c.name !== "agent"); // the agent's own run is not CI
       return {
         number: p.number, title: p.title, url: p.html_url, author: p.user?.login,
         state: p.merged_at ? "merged" : p.state === "open" ? "open" : "closed",
