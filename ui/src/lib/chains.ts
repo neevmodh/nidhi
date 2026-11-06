@@ -43,9 +43,9 @@ const VIEM = { 11155111: sepolia, 84532: baseSepolia, 421614: arbitrumSepolia, 1
 
 // Several public RPCs per chain: a flaky one never blanks a screen.
 const RPCS: Record<number, string[]> = {
-  11155111: ["https://ethereum-sepolia-rpc.publicnode.com", "https://sepolia.drpc.org", "https://1rpc.io/sepolia"],
-  84532: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
-  421614: ["https://sepolia-rollup.arbitrum.io/rpc", "https://arbitrum-sepolia-rpc.publicnode.com"],
+  11155111: ["https://ethereum-sepolia-rpc.publicnode.com", "https://sepolia.gateway.tenderly.co"],
+  84532: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com", "https://base-sepolia.gateway.tenderly.co"],
+  421614: ["https://sepolia-rollup.arbitrum.io/rpc", "https://arbitrum-sepolia-rpc.publicnode.com", "https://arbitrum-sepolia.gateway.tenderly.co"],
   1301: ["https://sepolia.unichain.org", "https://unichain-sepolia-rpc.publicnode.com"],
 };
 
@@ -84,7 +84,7 @@ export function client(id: number): PublicClient {
   if (!c) {
     c = createPublicClient({
       chain: VIEM[id as ChainId],
-      transport: fallback(RPCS[id].map((u) => http(u, { timeout: 15_000, retryCount: 1 }))),
+      transport: fallback(RPCS[id].map((u) => http(u, { timeout: 8_000, retryCount: 1, batch: { wait: 16 } }))),
       batch: { multicall: true },
     }) as PublicClient;
     clients.set(id, c);

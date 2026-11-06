@@ -7,6 +7,8 @@ on:
   pull_request:
     paths: ["ui/**", "chains/**", "deployments/**"]
   workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *" # hourly: refresh the ledger snapshot so first visits replay only the last hour
 
 permissions:
   contents: read

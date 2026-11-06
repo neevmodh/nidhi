@@ -1,4 +1,5 @@
-import { parseAbiItem, type Address, type Hex, type Log } from "viem";
+import { parseAbiItem, parseEventLogs, type Address, type Hex, type Log } from "viem";
+import { contractLogs } from "./logcache";
 import { useQuery } from "@tanstack/react-query";
 import { client, chainById, chainBySelector, deployedChains, ensOf, stacksOf, type ChainInfo, type Stack } from "./chains";
 import { destinationReceiverAbi, nidhiDispatcherAbi, nidhiHookAbi, roleAuthorityAbi } from "../data/abi";
@@ -48,18 +49,19 @@ const EV = {
   granteeSet: parseAbiItem("event GranteeSet(string label, uint64 indexed destSelector, address indexed account, address indexed by)"),
 };
 
-/** getLogs in windows, so public RPC range limits never blank a screen. */
+/** a contract's events of one kind, from the shared incremental log cache (see logcache.ts) */
 async function logs<T extends (typeof EV)[keyof typeof EV]>(chainId: number, address: Address, event: T, args?: any, fromBlock?: number): Promise<Log[]> {
-  const c = client(chainId);
-  const from = BigInt(fromBlock ?? chainById(chainId)?.deployment?.fromBlock ?? 0);
-  const latest = await c.getBlockNumber();
-  const step = chainId === 421614 ? 40_000n : 9_000n;
-  const out: Log[] = [];
-  for (let start = from; start <= latest; start += step + 1n) {
-    const end = start + step > latest ? latest : start + step;
-    out.push(...((await c.getLogs({ address, event: event as any, args, fromBlock: start, toBlock: end })) as Log[]));
-  }
-  return out;
+  const from = fromBlock ?? chainById(chainId)?.deployment?.fromBlock ?? 0;
+  const all = await contractLogs(chainId, address, from);
+  return parseEventLogs({ abi: [event] as any, logs: all, args, strict: false }) as unknown as Log[];
+}
+
+const blockTimes = new Map<string, bigint>();
+/** block timestamps never change: fetch each once */
+async function blockTime(chainId: number, n: bigint): Promise<bigint> {
+  const k = `${chainId}:${n}`;
+  if (!blockTimes.has(k)) blockTimes.set(k, (await client(chainId).getBlock({ blockNumber: n })).timestamp);
+  return blockTimes.get(k)!;
 }
 
 const relayAbi = [{ type: "function", name: "getHop", stateMutability: "view", inputs: [{ type: "bytes32" }], outputs: [{ type: "tuple", components: [
@@ -81,15 +83,15 @@ async function labelsFor(src: ChainInfo, stack: Stack): Promise<Map<string, stri
   const ens = ensOf(src);
   if (!ens) return m;
   const c = client(src.id);
-  for (const label of ens.grantees.split(",")) {
-    for (const to of stack.lanes) {
-      const sel = chainById(to)!.selector;
-      try {
-        const a = (await c.readContract({ address: stack.authority, abi: resolveAbi, functionName: "resolveGrantee", args: [label, sel] })) as Address;
-        const k = `${sel}:${a.toLowerCase()}`;
-        if (!/^0x0+$/.test(a) && !m.has(k)) m.set(k, `${label}.${ens.name}`);
-      } catch { /* name unavailable: no label */ }
-    }
+  const pairs = ens.grantees.split(",").flatMap((label) => stack.lanes.map((to) => ({ label, sel: chainById(to)!.selector })));
+  const found = await Promise.all(pairs.map(async ({ label, sel }) => {
+    try { return { label, sel, a: (await c.readContract({ address: stack.authority, abi: resolveAbi, functionName: "resolveGrantee", args: [label, sel] })) as Address }; }
+    catch { return null; } // name unavailable: no label
+  }));
+  for (const f of found) {
+    if (!f || /^0x0+$/.test(f.a)) continue;
+    const k = `${f.sel}:${f.a.toLowerCase()}`;
+    if (!m.has(k)) m.set(k, `${f.label}.${ens.name}`);
   }
   return m;
 }
@@ -100,13 +102,12 @@ async function grantsOnStack(src: ChainInfo, stack: Stack): Promise<Grant[]> {
   return Promise.all(
     (dispatched as any[]).map(async (l) => {
       const g = (await c.readContract({ address: stack.dispatcher, abi: nidhiDispatcherAbi, functionName: "getGrant", args: [l.args.grantId] })) as any;
-      const block = await c.getBlock({ blockNumber: l.blockNumber });
       const first = chainBySelector(BigInt(g.destSelector));
       const dest = stack.hop ? chainById(stack.hop.final) : first;
       return {
         id: l.args.grantId, src, dest, stack, via: stack.hop ? first : undefined,
         status: Number(g.status) as Status, outcome: Number(g.outcome), amount: BigInt(g.amount), token: g.token,
-        recipient: g.recipient, messageId: g.messageId, dispatchedAt: Number(block.timestamp), fee: l.args.fee,
+        recipient: g.recipient, messageId: g.messageId, dispatchedAt: Number(g.dispatchedAt), fee: l.args.fee,
         dispatchTx: l.transactionHash,
         label: labels.get(`${g.destSelector}:${String(g.recipient).toLowerCase()}`),
       } satisfies Grant;
@@ -235,7 +236,7 @@ export function useRoles(chainId: number) {
       for (const l of set) latest.set(`${l.args.label}:${l.args.destSelector}`, l);
       const grantees = await Promise.all(
         [...latest.values()].map(async (l) => {
-          const blk = await c.getBlock({ blockNumber: l.blockNumber });
+          const blk = { timestamp: await blockTime(chainId, l.blockNumber) };
           return { label: l.args.label as string, dest: chainBySelector(BigInt(l.args.destSelector)), account: l.args.account as Address, by: l.args.by as Address, at: Number(blk.timestamp) };
         }),
       );

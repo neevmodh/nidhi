@@ -47,6 +47,8 @@ contract HopRoute is Script {
             DestinationReceiver rx = new DestinationReceiver(_router(reg, finalId), address(0), deployer);
             rx.allowToken(_payout(reg, finalId));
             rx.addSource(_sel(reg, viaId), relayAddr);
+            // its ACK lands in the relay, which forwards it with a ccipSend inside try/catch: give it room
+            rx.setAckGasLimit(1_500_000);
             payable(address(rx)).transfer(vm.envOr("ACK_RESERVE_WEI", uint256(0.0015 ether)));
             vm.stopBroadcast();
             vm.writeJson(vm.toString(address(rx)), ROUTE, ".finalReceiver");
@@ -61,6 +63,8 @@ contract HopRoute is Script {
             require(block.chainid == sourceId, "run STEP=source on the source chain");
             uint64 via = _sel(reg, viaId);
             if (NidhiDispatcher(payable(dispatcher)).destReceivers(via) == address(0)) NidhiDispatcher(payable(dispatcher)).addDestination(via, relayAddr);
+            // the relay forwards with a ccipSend inside try/catch on delivery: 600k is not enough for CCIP 2.0 onramps
+            if (NidhiDispatcher(payable(dispatcher)).destGasLimit() < 2_000_000) NidhiDispatcher(payable(dispatcher)).setDestGasLimit(2_000_000);
             vm.stopBroadcast();
             console2.log("source routes via the relay", relayAddr);
         } else {

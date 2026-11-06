@@ -10,8 +10,9 @@
     "preview": "vite preview",
     "sync": "node scripts/sync.mjs",
     "predev": "npm run sync",
-    "prebuild": "npm run sync",
-    "check:design": "node scripts/check-design.mjs"
+    "prebuild": "npm run sync && npm run snapshot",
+    "check:design": "node scripts/check-design.mjs",
+    "snapshot": "node scripts/snapshot.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",

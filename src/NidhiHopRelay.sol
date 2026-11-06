@@ -25,6 +25,10 @@ import {ExtraArgsLib} from "./libraries/ExtraArgsLib.sol";
 /// Defensive like the receiver: a forward or an ACK that cannot be sent (fee reserve too low) never reverts the CCIP
 /// delivery. The grant is parked and anyone can retry once the relay is funded. Messages are told apart by their
 /// sender, not their chain selector, so the relay is also correct when every hop shares one selector (local simulator).
+///
+/// Gas: the forward happens inside ccipReceive, so the SOURCE's destGasLimit must cover a CCIP send (about 2M on CCIP 2.0
+/// testnet onramps), and the final receiver's ackGasLimit must cover the relayed ACK. When retrying by hand, pass an
+/// explicit gas limit: estimators stop at the lowest gas where the try/catch "succeeds", which is too little for the send.
 contract NidhiHopRelay is CCIPReceiver, Ownable2Step {
     using SafeERC20 for IERC20;
 
