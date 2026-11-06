@@ -293,7 +293,14 @@ The RMN curse status is checked before deploying and shown live in the app.
 
 A direct grant costs two CCIP messages; a two-hop grant costs four. On testnets a grant takes about 15–25 minutes to reach
 the grantee and 30–40 minutes to settle, mostly waiting for source-chain finality. With Faster-Than-Finality (the v5 ENS
-stack, 32 blocks on Sepolia) the outbound leg waits about 6.4 minutes of blocks instead of finality. The receipt leg from
+stack, 32 blocks on Sepolia) the outbound leg waits 32 blocks instead of finality. Measured live on 6 Nov 2026:
+
+| Grant | Lane | Sent | Paid to grantee | Time |
+|---|---|---|---|---|
+| `0xfd54…586d` | Sepolia → Base Sepolia | 08:31:00 UTC | 08:37:36 UTC | **6 min 36 s** |
+| `0x7828…6a79` | Sepolia → Arbitrum Sepolia | 08:39:36 UTC | 08:46:51 UTC | **7 min 15 s** |
+
+Before FTF the same lanes took 15–25 minutes. The receipt leg from
 Base or Arbitrum still waits for finality, because those lanes allow nothing else.
 
 ---
