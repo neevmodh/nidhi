@@ -13,6 +13,7 @@ import Network from "./pages/Network";
 import Pool from "./pages/Pool";
 import Roles from "./pages/Roles";
 import Settings from "./pages/Settings";
+import Ens from "./pages/Ens";
 import { Audit, NotFound, Queue } from "./pages/Misc";
 import { Execute, NewGrant, Sign } from "./pages/Flow";
 import "./styles/tokens.css";
@@ -42,6 +43,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="pool" element={<Pool />} />
                 <Route path="queue" element={<Queue />} />
                 <Route path="roles" element={<Roles />} />
+                <Route path="ens" element={<Ens />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="*" element={<NotFound />} />
               </Route>

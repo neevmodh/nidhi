@@ -98,3 +98,33 @@ export const addrUrl = (c: ChainInfo, a: string) => `${c.explorer}/address/${a}`
 export const ccipUrl = (messageId: string) => `https://ccip.chain.link/msg/${messageId}`;
 
 export const chainByKey = (k?: string) => CHAINS.find((c) => c.key === k || String(c.id) === k);
+
+// ---- source stacks: a chain can run more than one (Sepolia: the RoleAuthority stack and the ENSv2-gated stack)
+export interface EnsIdentity {
+  authority: Address; name: string; subregistry: Address; sharedResolver: Address; bobResolver: Address;
+  carolExpiry: number; granteeWallet: Address; grantees: string; daoResolver: Address;
+  approver: Address; auditor: Address; auditorName: string;
+}
+export interface Stack {
+  kind: "roles" | "ens";
+  label: string;
+  hook: Address; router: Address; dispatcher: Address; authority: Address;
+  poolId: `0x${string}`; positionId: number; fromBlock: number;
+  /** destination chain id => the receiver this stack routes to, when it differs from that chain's own receiver */
+  receivers?: Record<string, Address>;
+  lanes: ChainId[];
+}
+
+export function stacksOf(c: ChainInfo): Stack[] {
+  const d = c.deployment;
+  if (!d) return [];
+  const out: Stack[] = [{ kind: "roles", label: "RoleAuthority", hook: d.hook, router: d.router, dispatcher: d.dispatcher, authority: d.authority, poolId: d.poolId, positionId: d.positionId, fromBlock: d.fromBlock, lanes: c.lanes }];
+  const e = (d as any).ens;
+  if (e?.stack) {
+    const s = e.stack;
+    out.push({ kind: "ens", label: "ENSv2 · nidhi-dao.eth", hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: s.receivers, lanes: Object.keys(s.receivers ?? {}).map(Number) as ChainId[] });
+  }
+  return out;
+}
+export const ensOf = (c?: ChainInfo): EnsIdentity | undefined => (c?.deployment as any)?.ens?.identity;
+export const stackOf = (c: ChainInfo, kind?: string) => stacksOf(c).find((s) => s.kind === (kind ?? "roles")) ?? stacksOf(c)[0];

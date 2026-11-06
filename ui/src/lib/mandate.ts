@@ -28,6 +28,8 @@ export interface Attestation { grantId: Hex; evidenceHash: Hex; inputsHash: Hex;
 export interface Draft {
   v: 1;
   src: number;
+  /** which source stack signs and swaps: the RoleAuthority stack (default) or the ENSv2-gated one */
+  stack?: "roles" | "ens";
   label: string;
   mandate: Mandate;
   attestation: Attestation;
@@ -35,11 +37,11 @@ export interface Draft {
   auditor?: Address; auditorSig?: Hex;
 }
 
-export const domain = (c: ChainInfo) => ({ name: "Nidhi", version: "1", chainId: c.id, verifyingContract: c.deployment!.hook });
+export const domain = (c: ChainInfo, hook: Address = c.deployment!.hook) => ({ name: "Nidhi", version: "1", chainId: c.id, verifyingContract: hook });
 
-export const poolKey = (c: ChainInfo) => {
+export const poolKey = (c: ChainInfo, hook: Address = c.deployment!.hook) => {
   const [c0, c1] = c.base.address.toLowerCase() < c.payout.address.toLowerCase() ? [c.base.address, c.payout.address] : [c.payout.address, c.base.address];
-  return { currency0: c0, currency1: c1, fee: 3000, tickSpacing: 60, hooks: c.deployment!.hook } as const;
+  return { currency0: c0, currency1: c1, fee: 3000, tickSpacing: 60, hooks: hook } as const;
 };
 export const zeroForOne = (c: ChainInfo) => c.base.address.toLowerCase() < c.payout.address.toLowerCase();
 export const MIN_SQRT = 4295128739n + 1n;

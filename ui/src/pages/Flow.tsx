@@ -3,19 +3,19 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { useQuery } from "@tanstack/react-query";
 import { useAccount, useSignTypedData, useSwitchChain, useWriteContract, usePublicClient } from "wagmi";
 import { isHex, parseEther, zeroAddress, type Address, type Hex } from "viem";
-import { chainById, client, deployedChains, txUrl } from "../lib/chains";
+import { chainById, client, deployedChains, ensOf, stackOf, stacksOf, txUrl, type Stack } from "../lib/chains";
 import { useApp } from "../lib/app";
-import { useChainState, useRoles } from "../lib/grants";
+import { useChainState } from "../lib/grants";
 import { amount, sameAddr, short } from "../lib/format";
 import { explain } from "../lib/errors";
-import { nidhiSwapRouterAbi, roleAuthorityAbi } from "../data/abi";
+import { nidhiSwapRouterAbi } from "../data/abi";
 import evidence from "../data/evidence.json";
 import {
   ATTESTATION_TYPES, MANDATE_TYPES, MAX_SQRT, MIN_SQRT, decodeDraft, domain, encodeDraft, hookData, labelHash,
   newGrantId, poolKey, zeroForOne, type Draft,
 } from "../lib/mandate";
 import { PageHead, WalletButton } from "../components/shell";
-import { ChainName, Chip, ErrorNote, ExtLink, Hash, Icon, Route, Skel } from "../components/ui";
+import { ChainName, Chip, ErrorNote, ExtLink, Hash, Icon, ProtocolLogo, Route, Skel } from "../components/ui";
 
 const quoterAbi = [{
   type: "function", name: "quoteExactInputSingle", stateMutability: "nonpayable",
@@ -32,6 +32,32 @@ const wethAbi = [
 ] as const;
 
 const bundle = evidence as any;
+const authAbi = [
+  { type: "function", name: "APPROVER", stateMutability: "view", inputs: [], outputs: [{ type: "bytes32" }] },
+  { type: "function", name: "AUDITOR", stateMutability: "view", inputs: [], outputs: [{ type: "bytes32" }] },
+  { type: "function", name: "isAuthorized", stateMutability: "view", inputs: [{ type: "bytes32" }, { type: "address" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "resolveGrantee", stateMutability: "view", inputs: [{ type: "string" }, { type: "uint64" }], outputs: [{ type: "address" }] },
+] as const;
+
+/** the signer's live role in the stack's authority (RoleAuthority, or ENSv2 roles on nidhi-dao.eth) */
+function useRole(chainId: number, stack: Stack | undefined, who?: Address) {
+  return useQuery({
+    queryKey: ["role", chainId, stack?.authority, who],
+    enabled: !!stack && !!who,
+    queryFn: async () => {
+      const c = client(chainId);
+      const [ap, au] = await Promise.all([
+        c.readContract({ address: stack!.authority, abi: authAbi, functionName: "APPROVER" }),
+        c.readContract({ address: stack!.authority, abi: authAbi, functionName: "AUDITOR" }),
+      ]);
+      const [isApprover, isAuditor] = await Promise.all([
+        c.readContract({ address: stack!.authority, abi: authAbi, functionName: "isAuthorized", args: [ap as Hex, who!] }),
+        c.readContract({ address: stack!.authority, abi: authAbi, functionName: "isAuthorized", args: [au as Hex, who!] }),
+      ]);
+      return { isApprover: Boolean(isApprover), isAuditor: Boolean(isAuditor) };
+    },
+  });
+}
 const BAND = 10n; // percent either side of the V4Quoter quote
 
 function Stepper({ at }: { at: 1 | 2 | 3 }) {
@@ -58,30 +84,35 @@ export function NewGrant() {
   const { address } = useAccount();
   const st = useChainState(chainId);
 
+  const stacks = stacksOf(src);
+  const [kind, setKind] = useState<"roles" | "ens">(params.get("stack") === "ens" && stacks.some((s) => s.kind === "ens") ? "ens" : "roles");
+  const stack = stackOf(src, kind);
+  const lanes = stack.lanes.filter((l) => chainById(l)?.deployment);
+  const ens = ensOf(src);
   const [label, setLabel] = useState("");
-  const [dest, setDest] = useState<number>(src.lanes.find((l) => chainById(l)?.deployment) ?? src.lanes[0]);
+  const [dest, setDest] = useState<number>(lanes[0]);
   const [amountIn, setAmountIn] = useState("0.0003");
   const [executor, setExecutor] = useState<string>("");
   const [evid, setEvid] = useState<string>(params.get("evidence") ?? bundle?.hashes?.evidenceHash ?? "");
   useEffect(() => { if (address && !executor) setExecutor(address); }, [address, executor]);
-  useEffect(() => { setDest(src.lanes.find((l) => chainById(l)?.deployment) ?? src.lanes[0]); }, [chainId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setDest(lanes[0]); }, [chainId, kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const destCh = chainById(dest);
   let wei = 0n; try { wei = parseEther(amountIn || "0"); } catch { wei = 0n; }
 
   // grantee name must resolve on the chosen destination (fail-closed, same call the hook makes)
   const payee = useQuery({
-    queryKey: ["payee", chainId, label, dest],
+    queryKey: ["payee", chainId, kind, label, dest],
     enabled: /^[a-z0-9-]{1,63}$/.test(label) && !!destCh,
-    queryFn: () => client(chainId).readContract({ address: src.deployment!.authority, abi: roleAuthorityAbi, functionName: "resolveGrantee", args: [label, destCh!.selector] }) as Promise<Address>,
+    queryFn: () => client(chainId).readContract({ address: stack.authority, abi: authAbi, functionName: "resolveGrantee", args: [label, destCh!.selector] }) as Promise<Address>,
   });
   const quote = useQuery({
-    queryKey: ["quote", chainId, wei.toString()],
+    queryKey: ["quote", chainId, kind, wei.toString()],
     enabled: wei > 0n,
     queryFn: async () => {
       const { result } = await client(chainId).simulateContract({
         address: src.uniswap.quoter, abi: quoterAbi, functionName: "quoteExactInputSingle",
-        args: [{ poolKey: poolKey(src), zeroForOne: zeroForOne(src), exactAmount: wei, hookData: "0x" }],
+        args: [{ poolKey: poolKey(src, stack.hook), zeroForOne: zeroForOne(src), exactAmount: wei, hookData: "0x" }],
       });
       return result[0] as bigint;
     },
@@ -98,12 +129,12 @@ export function NewGrant() {
     const grantId = newGrantId(label);
     const useBundle = sameAddr(evid, bundle?.hashes?.evidenceHash);
     const d: Draft = {
-      v: 1, src: chainId, label,
+      v: 1, src: chainId, stack: kind, label,
       mandate: {
         grantId, executor: executor as Address, recipient: payee.data!, tokenIn: src.base.address, tokenOut: src.payout.address,
         amountIn: wei, minOut: (q * (100n - BAND)) / 100n, maxOut: (q * (100n + BAND)) / 100n,
-        destChainSelector: destCh!.selector, destReceiver: destCh!.deployment!.receiver, evidenceHash: evid as Hex,
-        deadline: BigInt(Math.floor(Date.now() / 1000) + 3600), poolId: src.deployment!.poolId, recipientLabelHash: labelHash(label),
+        destChainSelector: destCh!.selector, destReceiver: stack.receivers?.[String(dest)] ?? destCh!.deployment!.receiver, evidenceHash: evid as Hex,
+        deadline: BigInt(Math.floor(Date.now() / 1000) + 3600), poolId: stack.poolId, recipientLabelHash: labelHash(label),
       },
       attestation: {
         grantId, evidenceHash: evid as Hex,
@@ -121,17 +152,30 @@ export function NewGrant() {
       <Stepper at={1} />
       <div className="grid">
         <div className="card span-8 stack">
+          {stacks.length > 1 && (
+            <div className="field">
+              <label>Who decides</label>
+              <div className="row row--wrap" role="radiogroup">
+                {stacks.map((s) => (
+                  <button key={s.kind} role="radio" aria-checked={kind === s.kind} className={`btn ${kind === s.kind ? "btn--primary" : "btn--secondary"}`} onClick={() => setKind(s.kind)}>
+                    {s.kind === "ens" ? <><ProtocolLogo name="ens" />ENS: {ens?.name}</> : "DAO role registry"}
+                  </button>
+                ))}
+              </div>
+              <span className="hint">{kind === "ens" ? `Roles and grantee addresses are read live from ${ens?.name} on ENSv2.` : "Roles and grantee addresses come from the DAO's RoleAuthority."}</span>
+            </div>
+          )}
           <div className="field">
-            <label htmlFor="n-l">Grantee name</label>
-            <input id="n-l" className="input" value={label} onChange={(e) => setLabel(e.target.value.toLowerCase().trim())} placeholder="alice" autoComplete="off" />
+            <label htmlFor="n-l">Grantee name{kind === "ens" ? ` (a subname of ${ens?.name})` : ""}</label>
+            <input id="n-l" className="input" value={label} onChange={(e) => setLabel(e.target.value.toLowerCase().trim())} placeholder={kind === "ens" ? "alice, bob or carol" : "alice"} autoComplete="off" />
             {label && (payee.isLoading ? <span className="hint">Checking the name on {src.short}…</span>
-              : payeeOk ? <span className="hint hint--ok">Paid to <span className="mono">{short(payee.data)}</span> on {destCh?.short}</span>
+              : payeeOk ? <span className="hint hint--ok">{kind === "ens" ? `${label}.${ens?.name}` : label} pays <span className="mono">{short(payee.data)}</span> on {destCh?.short}</span>
               : <span className="hint hint--bad">No address for this name on {destCh?.short}. The admin names grantees under Roles.</span>)}
           </div>
           <div className="field">
             <label htmlFor="n-d">Paid on</label>
             <select id="n-d" className="select" value={dest} onChange={(e) => setDest(Number(e.target.value))}>
-              {src.lanes.filter((l) => chainById(l)?.deployment).map((l) => <option key={l} value={l}>{chainById(l)?.name}</option>)}
+              {lanes.map((l) => <option key={l} value={l}>{chainById(l)?.name}</option>)}
             </select>
             <span className="hint">Only chains with a live CCIP lane from {src.short} appear.</span>
           </div>
@@ -182,13 +226,16 @@ export function Sign() {
   const { signTypedDataAsync, isPending } = useSignTypedData();
   const { switchChainAsync } = useSwitchChain();
   const [err, setErr] = useState<{ text: string; raw: string } | null>(null);
-  const roles = useRoles(draft?.src ?? 84532);
+  const sSrc = draft ? chainById(draft.src) : undefined;
+  const sStack = sSrc ? stackOf(sSrc, draft?.stack) : undefined;
+  const role = useRole(draft?.src ?? 84532, sStack, address);
   if (!draft) return <ErrorNote text="This signing link is incomplete or damaged. Start a new grant." />;
   const src = chainById(draft.src)!;
   const dest = deployedChains().find((c) => c.selector === draft.mandate.destChainSelector);
   const m = draft.mandate;
-  const isApprover = !!address && !!roles.data?.roles.approver.some((a) => sameAddr(a, address));
-  const isAuditor = !!address && !!roles.data?.roles.auditor.some((a) => sameAddr(a, address));
+  const stack = sStack!;
+  const isApprover = !!role.data?.isApprover;
+  const isAuditor = !!role.data?.isAuditor;
   const link = `${location.origin}${location.pathname}${location.hash}`;
 
   async function sign(as: "approver" | "auditor") {
@@ -198,8 +245,8 @@ export function Sign() {
       if (as === "auditor" && sameAddr(address, draft!.approver)) throw new Error("same-signer");
       if (wc !== draft!.src) await switchChainAsync({ chainId: draft!.src as any });
       const sig = as === "approver"
-        ? await signTypedDataAsync({ domain: domain(src), types: MANDATE_TYPES, primaryType: "Mandate", message: m as any })
-        : await signTypedDataAsync({ domain: domain(src), types: ATTESTATION_TYPES, primaryType: "Attestation", message: draft!.attestation as any });
+        ? await signTypedDataAsync({ domain: domain(src, stack.hook), types: MANDATE_TYPES, primaryType: "Mandate", message: m as any })
+        : await signTypedDataAsync({ domain: domain(src, stack.hook), types: ATTESTATION_TYPES, primaryType: "Attestation", message: draft!.attestation as any });
       const next: Draft = as === "approver" ? { ...draft!, approver: address, approverSig: sig } : { ...draft!, auditor: address, auditorSig: sig };
       nav(`/app/sign#${encodeDraft(next)}`, { replace: true });
     } catch (e) {
@@ -224,7 +271,7 @@ export function Sign() {
           </dl>
           {draft.approverSig ? <p className="small muted">Signed by <span className="mono">{short(draft.approver)}</span></p>
             : <button className="btn btn--primary" disabled={!isApprover || isPending} onClick={() => sign("approver")}><Icon name="signature" size="sm" />Sign as approver</button>}
-          {!draft.approverSig && address && !isApprover && <p className="small hint--bad">This wallet does not hold the approver role on {src.short}.</p>}
+          {!draft.approverSig && address && !isApprover && <p className="small hint--bad">This wallet does not hold the approver role {stack.kind === "ens" ? "on nidhi-dao.eth" : `on ${src.short}`}.</p>}
         </section>
         <section className="card span-6 stack">
           <div className="row row--between"><span className="label">Auditor signs the attestation</span>{draft.auditorSig ? <Chip tone="ok">Signed</Chip> : <Chip tone="idle">Waiting</Chip>}</div>
@@ -235,7 +282,7 @@ export function Sign() {
           </dl>
           {draft.auditorSig ? <p className="small muted">Signed by <span className="mono">{short(draft.auditor)}</span></p>
             : <button className="btn btn--primary" disabled={!isAuditor || isPending} onClick={() => sign("auditor")}><Icon name="signature" size="sm" />Sign as auditor</button>}
-          {!draft.auditorSig && address && !isAuditor && <p className="small hint--bad">This wallet does not hold the auditor role on {src.short}.</p>}
+          {!draft.auditorSig && address && !isAuditor && <p className="small hint--bad">This wallet does not hold the auditor role {stack.kind === "ens" ? "on nidhi-dao.eth" : `on ${src.short}`}.</p>}
         </section>
       </div>
       {err && <div style={{ marginTop: 24 }}><ErrorNote {...err} /></div>}
@@ -265,6 +312,7 @@ export function Execute() {
   const [err, setErr] = useState<{ text: string; raw: string } | null>(null);
   const [done, setDone] = useState<Hex | null>(null);
   const src = draft ? chainById(draft.src)! : null;
+  const xStack = src ? stackOf(src, draft?.stack) : undefined;
 
   const bal = useQuery({
     queryKey: ["exec-bal", draft?.src, address, done],
@@ -273,7 +321,7 @@ export function Execute() {
       const c = client(draft!.src);
       const [w, a] = await Promise.all([
         c.readContract({ address: src!.base.address, abi: wethAbi, functionName: "balanceOf", args: [address!] }),
-        c.readContract({ address: src!.base.address, abi: wethAbi, functionName: "allowance", args: [address!, src!.deployment!.router] }),
+        c.readContract({ address: src!.base.address, abi: wethAbi, functionName: "allowance", args: [address!, xStack!.router] }),
       ]);
       return { weth: w as bigint, allowance: a as bigint };
     },
@@ -292,10 +340,10 @@ export function Execute() {
       if (wc !== draft!.src) await switchChainAsync({ chainId: draft!.src as any });
       let hash: Hex;
       if (step === "wrap") hash = await writeContractAsync({ address: src!.base.address, abi: wethAbi, functionName: "deposit", value: m.amountIn - (bal.data?.weth ?? 0n), chainId: draft!.src as any });
-      else if (step === "approve") hash = await writeContractAsync({ address: src!.base.address, abi: wethAbi, functionName: "approve", args: [src!.deployment!.router, m.amountIn], chainId: draft!.src as any });
+      else if (step === "approve") hash = await writeContractAsync({ address: src!.base.address, abi: wethAbi, functionName: "approve", args: [xStack!.router, m.amountIn], chainId: draft!.src as any });
       else hash = await writeContractAsync({
-        address: src!.deployment!.router, abi: nidhiSwapRouterAbi, functionName: "swap", chainId: draft!.src as any,
-        args: [poolKey(src!) as any, { zeroForOne: zeroForOne(src!), amountSpecified: -m.amountIn, sqrtPriceLimitX96: zeroForOne(src!) ? MIN_SQRT : MAX_SQRT } as any, hookData(draft!), BigInt(Math.floor(Date.now() / 1000) + 600)],
+        address: xStack!.router, abi: nidhiSwapRouterAbi, functionName: "swap", chainId: draft!.src as any,
+        args: [poolKey(src!, xStack!.hook) as any, { zeroForOne: zeroForOne(src!), amountSpecified: -m.amountIn, sqrtPriceLimitX96: zeroForOne(src!) ? MIN_SQRT : MAX_SQRT } as any, hookData(draft!), BigInt(Math.floor(Date.now() / 1000) + 600)],
       });
       await pub?.waitForTransactionReceipt({ hash });
       if (step === "send") { setDone(hash); setTimeout(() => nav(`/app/grants/${src!.key}/${m.grantId}`), 2500); }

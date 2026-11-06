@@ -117,19 +117,26 @@ contract Deploy is Script {
 
         Out memory o;
         vm.startBroadcast(pk);
-        o.authority = address(_authority(deployer, admin));
+        // ENS_AUTHORITY: use an existing authority (ENSv2Authority on Sepolia) instead of a new RoleAuthority
+        address ens = vm.envOr("ENS_AUTHORITY", address(0));
+        o.authority = ens != address(0) ? ens : address(_authority(deployer, admin));
         o.router = address(new NidhiSwapRouter(IPoolManager(c.poolManager)));
         NidhiDispatcher dispatcher = new NidhiDispatcher(c.ccipRouter, address(0), deployer);
         o.dispatcher = address(dispatcher);
-        DestinationReceiver receiver = new DestinationReceiver(c.ccipRouter, address(0), deployer);
-        o.receiver = address(receiver);
-        receiver.allowToken(c.payout);
+        // EXISTING_RECEIVER: a second source stack on a chain reuses that chain's receiver (routes are add-only)
+        o.receiver = vm.envOr("EXISTING_RECEIVER", address(0));
+        bool newReceiver = o.receiver == address(0);
+        if (newReceiver) {
+            DestinationReceiver receiver = new DestinationReceiver(c.ccipRouter, address(0), deployer);
+            o.receiver = address(receiver);
+            receiver.allowToken(c.payout);
+        }
         o.dailyCapBase = capBase;
         o.hook = address(_deployHook(c, o, deployer));
         dispatcher.setHook(o.hook);
         (o.poolId, o.positionId) = _pool(c, NidhiHook(o.hook), deployer, seedUsdc);
         payable(o.dispatcher).transfer(reserve);
-        payable(o.receiver).transfer(reserve);
+        if (newReceiver) payable(o.receiver).transfer(reserve);
         vm.stopBroadcast();
 
         _write(c, o, deployer, admin);
@@ -334,7 +341,7 @@ contract Deploy is Script {
         vm.serializeUint(k, "positionId", o.positionId);
         vm.serializeUint(k, "dailyCapBaseWei", o.dailyCapBase);
         string memory json = vm.serializeBytes32(k, "poolId", o.poolId);
-        vm.writeJson(json, string.concat("deployments/", vm.toString(c.id), ".json"));
+        vm.writeJson(json, vm.envOr("DEPLOY_OUT", string.concat("deployments/", vm.toString(c.id), ".json")));
         console2.log("chain", c.id);
         console2.log("  hook      ", o.hook);
         console2.log("  dispatcher", o.dispatcher);

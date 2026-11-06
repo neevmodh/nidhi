@@ -1,6 +1,6 @@
 import { parseAbiItem, type Address, type Hex, type Log } from "viem";
 import { useQuery } from "@tanstack/react-query";
-import { client, chainById, chainBySelector, deployedChains, type ChainInfo } from "./chains";
+import { client, chainById, chainBySelector, deployedChains, ensOf, stacksOf, type ChainInfo, type Stack } from "./chains";
 import { destinationReceiverAbi, nidhiDispatcherAbi, nidhiHookAbi, roleAuthorityAbi } from "../data/abi";
 
 // Ledger statuses as stored on-chain (NidhiDispatcher.Status) and receiver outcomes (AckLib).
@@ -22,6 +22,7 @@ export interface Grant {
   fee: bigint;
   dispatchTx: Hex;
   label?: string;
+  stack: Stack;
 }
 
 export interface Payout {
@@ -46,9 +47,9 @@ const EV = {
 };
 
 /** getLogs in windows, so public RPC range limits never blank a screen. */
-async function logs<T extends (typeof EV)[keyof typeof EV]>(chainId: number, address: Address, event: T, args?: any): Promise<Log[]> {
+async function logs<T extends (typeof EV)[keyof typeof EV]>(chainId: number, address: Address, event: T, args?: any, fromBlock?: number): Promise<Log[]> {
   const c = client(chainId);
-  const from = BigInt(chainById(chainId)?.deployment?.fromBlock ?? 0);
+  const from = BigInt(fromBlock ?? chainById(chainId)?.deployment?.fromBlock ?? 0);
   const latest = await c.getBlockNumber();
   const step = chainId === 421614 ? 40_000n : 9_000n;
   const out: Log[] = [];
@@ -59,44 +60,58 @@ async function logs<T extends (typeof EV)[keyof typeof EV]>(chainId: number, add
   return out;
 }
 
-/** label for a recipient, from RoleAuthority.GranteeSet on the source chain */
-async function labelsFor(src: ChainInfo): Promise<Map<string, string>> {
+const resolveAbi = [{ type: "function", name: "resolveGrantee", stateMutability: "view", inputs: [{ type: "string" }, { type: "uint64" }], outputs: [{ type: "address" }] }] as const;
+
+/** grantee names for a stack: RoleAuthority.GranteeSet events, or the ENS subnames resolved live */
+async function labelsFor(src: ChainInfo, stack: Stack): Promise<Map<string, string>> {
   const m = new Map<string, string>();
-  if (!src.deployment) return m;
-  for (const l of (await logs(src.id, src.deployment.authority, EV.granteeSet)) as any[]) {
-    m.set(`${l.args.destSelector}:${String(l.args.account).toLowerCase()}`, l.args.label);
+  if (stack.kind === "roles") {
+    for (const l of (await logs(src.id, stack.authority, EV.granteeSet)) as any[]) {
+      m.set(`${l.args.destSelector}:${String(l.args.account).toLowerCase()}`, l.args.label);
+    }
+    return m;
+  }
+  const ens = ensOf(src);
+  if (!ens) return m;
+  const c = client(src.id);
+  for (const label of ens.grantees.split(",")) {
+    for (const to of stack.lanes) {
+      const sel = chainById(to)!.selector;
+      try {
+        const a = (await c.readContract({ address: stack.authority, abi: resolveAbi, functionName: "resolveGrantee", args: [label, sel] })) as Address;
+        const k = `${sel}:${a.toLowerCase()}`;
+        if (!/^0x0+$/.test(a) && !m.has(k)) m.set(k, `${label}.${ens.name}`);
+      } catch { /* name unavailable: no label */ }
+    }
   }
   return m;
 }
 
-async function grantsOn(src: ChainInfo): Promise<Grant[]> {
-  const d = src.deployment!;
-  const [dispatched, labels] = await Promise.all([logs(src.id, d.dispatcher, EV.dispatched), labelsFor(src)]);
+async function grantsOnStack(src: ChainInfo, stack: Stack): Promise<Grant[]> {
+  const [dispatched, labels] = await Promise.all([logs(src.id, stack.dispatcher, EV.dispatched, undefined, stack.fromBlock), labelsFor(src, stack)]);
   const c = client(src.id);
-  const rows = await Promise.all(
+  return Promise.all(
     (dispatched as any[]).map(async (l) => {
-      const g = (await c.readContract({ address: d.dispatcher, abi: nidhiDispatcherAbi, functionName: "getGrant", args: [l.args.grantId] })) as any;
+      const g = (await c.readContract({ address: stack.dispatcher, abi: nidhiDispatcherAbi, functionName: "getGrant", args: [l.args.grantId] })) as any;
       const block = await c.getBlock({ blockNumber: l.blockNumber });
       const dest = chainBySelector(BigInt(g.destSelector));
       return {
-        id: l.args.grantId,
-        src,
-        dest,
-        status: Number(g.status) as Status,
-        outcome: Number(g.outcome),
-        amount: BigInt(g.amount),
-        token: g.token,
-        recipient: g.recipient,
-        messageId: g.messageId,
-        dispatchedAt: Number(block.timestamp),
-        fee: l.args.fee,
+        id: l.args.grantId, src, dest, stack,
+        status: Number(g.status) as Status, outcome: Number(g.outcome), amount: BigInt(g.amount), token: g.token,
+        recipient: g.recipient, messageId: g.messageId, dispatchedAt: Number(block.timestamp), fee: l.args.fee,
         dispatchTx: l.transactionHash,
         label: labels.get(`${g.destSelector}:${String(g.recipient).toLowerCase()}`),
       } satisfies Grant;
     }),
   );
-  return rows;
 }
+
+async function grantsOn(src: ChainInfo): Promise<Grant[]> {
+  return (await Promise.all(stacksOf(src).map((s) => grantsOnStack(src, s)))).flat();
+}
+
+/** the receiver a grant was routed to: the stack's own receiver for that chain, else the chain's receiver */
+export const receiverFor = (g: Grant) => (g.dest ? (g.stack.receivers?.[String(g.dest.id)] ?? g.dest.deployment?.receiver) : undefined);
 
 export function useGrants(chainId?: number) {
   return useQuery({
@@ -121,14 +136,13 @@ export function useGrant(chainId: number, id: Hex) {
       const all = await grantsOn(src);
       const g = all.find((x) => x.id.toLowerCase() === id.toLowerCase());
       if (!g) throw new Error("No grant with this id on this chain.");
-      const d = src.deployment;
       const [auth, ack] = await Promise.all([
-        logs(src.id, d.hook, EV.authorized, { grantId: g.id }),
-        logs(src.id, d.dispatcher, EV.acknowledged, { grantId: g.id }),
+        logs(src.id, g.stack.hook, EV.authorized, { grantId: g.id }, g.stack.fromBlock),
+        logs(src.id, g.stack.dispatcher, EV.acknowledged, { grantId: g.id }, g.stack.fromBlock),
       ]);
       let payout: Payout | undefined;
-      if (g.dest?.deployment) {
-        const rx = g.dest.deployment.receiver;
+      const rx = receiverFor(g);
+      if (g.dest?.deployment && rx) {
         const p = (await client(g.dest.id).readContract({ address: rx, abi: destinationReceiverAbi, functionName: "getPayout", args: [g.id] })) as any;
         const [rec, paid, held, sent] = await Promise.all([
           logs(g.dest.id, rx, EV.received, { grantId: g.id }),
@@ -137,13 +151,9 @@ export function useGrant(chainId: number, id: Hex) {
           logs(g.dest.id, rx, EV.ackSent, { grantId: g.id }),
         ]);
         payout = {
-          outcome: Number(p.outcome),
-          ackPending: Boolean(p.ackPending),
-          amount: BigInt(p.amount),
-          receivedTx: rec[0]?.transactionHash ?? undefined,
-          paidTx: (paid[0] ?? held[0])?.transactionHash ?? undefined,
-          ackTx: sent[0]?.transactionHash ?? undefined,
-          ackMessageId: (sent[0] as any)?.args?.ackMessageId,
+          outcome: Number(p.outcome), ackPending: Boolean(p.ackPending), amount: BigInt(p.amount),
+          receivedTx: rec[0]?.transactionHash ?? undefined, paidTx: (paid[0] ?? held[0])?.transactionHash ?? undefined,
+          ackTx: sent[0]?.transactionHash ?? undefined, ackMessageId: (sent[0] as any)?.args?.ackMessageId,
         };
       }
       const a = auth[0] as any;

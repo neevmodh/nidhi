@@ -13,10 +13,10 @@
   "grantId": "0x3f4e54a6732c2a21ed7df7b2c26a4238705face3fa643fa58dba232ad79b8df5",
   "grantLabel": "nidhi-001",
   "hashes": {
-    "evidenceHash": "0xda07fe98ae5ccecae8b6837b8b0c738f9f0fddc97b0d688a74ab9bb67864ba48",
+    "evidenceHash": "0xefe25d5a1428587175eb360a02d4ec5bf6369448711b429f201d803ae9416998",
     "inputsHash": "0x1aa5f5e7cca8f817caf42c9d905f57a0066232ecb0b656d90a85a4f482fe9609",
     "modelHash": "0x21ad3f7c7a09ee812916ea759bdb2cfab8d33a6ade4065d1cac3633335ced46e",
-    "outputHash": "0xca9691573096b6181691a7fe8b3c20557f6df4d220b2e7a22848d7f81e95dfa8",
+    "outputHash": "0x419b5ac3bb205705a54bcac8bee264e4b195fac54d945e804f82bce8f035e5a6",
     "promptHash": "0xf27d22de16d9c3e053f4de3fa1bfbbe726e9351e3f61178b25c767e60558fa79",
     "rubricHash": "0xf5e63652753f2fe2d6e0b367d85622a63e7dff60b170bf21a7a141939fc49f19"
   },
@@ -103,7 +103,7 @@
     "repo": "Uniswap/v4-template",
     "rfpHash": "0xf2dc52e187b0e8f53e5f5db3162e1af68ffa9a85f9562117df561d05f2b105af"
   },
-  "issuedAt": 1793924669,
+  "issuedAt": 1793933719,
   "output": {
     "jury": {
       "inconsistentVotes": 0,
@@ -113,14 +113,12 @@
           "provider": "groq",
           "review": {
             "concerns": [
-              "No evidence that the PR was merged into the repository's default branch; the diff alone does not indicate merge status.",
-              "CI results are not included; we cannot verify that all CI checks are passing on the merged commit.",
-              "The added `DeployLocalV4` script is gated to chainId 31337 (local only) and does not address live‑network reliability directly.",
-              "The README change removes the `--disable-code-size-limit` flag, which may be required for successful deployment on some live networks.",
-              "`foundry.toml` now contains duplicate `bytecode_hash` entries (one removed, one added) which could cause configuration errors.",
-              "Modifications to `BaseScript` change labeling and deployer logic; it is unclear if these changes preserve existing script behavior for live networks."
+              "Cannot confirm that the PR is merged into the default branch from the diff alone.",
+              "No CI run results are provided, so it is unknown whether all checks pass.",
+              "The changes focus on local‑only behavior (e.g., block.chainid == 31337) and do not clearly address live‑network execution reliability.",
+              "No evidence that existing deployment scripts (e.g., script/00_DeployHook.s.sol) were updated to use the new utilities, so overall script reliability may not be fully improved."
             ],
-            "summary": "The diff updates files in the `script/` directory and adds new helper contracts that aim to improve local‑only deployment, but the information provided does not confirm that the pull request was merged into the default branch or that CI passes on the merged head. Consequently, we cannot determine definitively that all acceptance criteria are met.",
+            "summary": "The diff modifies files in the script/ directory and adds utilities intended to make local deployments more reliable, suggesting progress toward the RFP goal. However, the diff alone does not demonstrate that the scripts now run reliably on both a local node and a live network, nor does it provide evidence that the pull request is merged into the default branch or that CI passes.",
             "verdict": "insufficient_evidence"
           },
           "status": "reviewed"
@@ -174,10 +172,10 @@
       }
     ],
     "valuation": {
-      "at": "2026-11-06T00:24:29.428Z",
+      "at": "2026-11-06T02:55:19.688Z",
       "pair": "WETH->USDC (chain 1)",
       "source": "uniswap-trading-api",
-      "usd": 0.223983
+      "usd": 0.224126
     }
   },
   "rubric": {

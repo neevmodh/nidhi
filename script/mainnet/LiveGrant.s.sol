@@ -12,6 +12,10 @@ import {NidhiHook} from "../../src/NidhiHook.sol";
 import {NidhiSwapRouter} from "../../src/NidhiSwapRouter.sol";
 import {Mandate, Attestation} from "../../src/libraries/Mandate.sol";
 
+interface INidhiRoutes {
+    function destReceivers(uint64) external view returns (address);
+}
+
 interface IWrapped {
     function deposit() external payable;
     function approve(address, uint256) external returns (bool);
@@ -75,7 +79,7 @@ contract LiveGrant is Script {
 
     function _ctx() internal view returns (Ctx memory c) {
         c.reg = vm.readFile(vm.envOr("REGISTRY", string("chains/registry.json")));
-        c.dep = vm.readFile(string.concat("deployments/", vm.toString(block.chainid), ".json"));
+        c.dep = vm.readFile(vm.envOr("DEPLOY_FILE", string.concat("deployments/", vm.toString(block.chainid), ".json")));
         c.destId = vm.envUint("DEST_CHAIN");
         string memory rk = string.concat(".chains.", vm.toString(block.chainid));
         string memory dk = string.concat(".chains.", vm.toString(c.destId));
@@ -84,7 +88,9 @@ contract LiveGrant is Script {
         c.base = vm.parseJsonAddress(c.reg, string.concat(rk, ".wrappedNative.address"));
         c.payout = vm.parseJsonAddress(c.reg, string.concat(rk, ".payoutToken.address"));
         c.destSelector = uint64(vm.parseUint(vm.parseJsonString(c.reg, string.concat(dk, ".ccip.selector"))));
-        c.destReceiver = vm.parseJsonAddress(vm.readFile(string.concat("deployments/", vm.toString(c.destId), ".json")), ".receiver");
+        // the receiver this stack actually routes to (a second stack on a chain has its own)
+        c.destReceiver = INidhiRoutes(vm.parseJsonAddress(c.dep, ".dispatcher")).destReceivers(c.destSelector);
+        require(c.destReceiver != address(0), "no route from this stack to DEST_CHAIN");
         c.amountIn = uint128(vm.envOr("AMOUNT_IN_WEI", uint256(0.0003 ether)));
         c.label = vm.envOr("GRANT_LABEL", string("alice"));
         c.grantee = vm.envAddress("GRANTEE");

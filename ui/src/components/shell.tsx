@@ -77,6 +77,7 @@ const NAV = [
   ["/app/network", "Network"],
   ["/app/pool", "Pool"],
   ["/app/roles", "Roles"],
+  ["/app/ens", "ENS"],
 ] as const;
 
 export function AppBar() {

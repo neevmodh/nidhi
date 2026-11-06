@@ -57,6 +57,41 @@
     "positionId": 41403,
     "receiver": "0x4E5A6ce89eaDE86be64f1Bb095aA3b45C371C690",
     "router": "0xbDF00CA8f9FAC75f5BFefcCf2fc64685B12C0b6D",
-    "fromBlock": 12071642
+    "fromBlock": 12071642,
+    "ens": {
+      "stack": {
+        "admin": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+        "authority": "0x92ceAa59dfB8Ce4A85dCECFd26e50Ba58e375600",
+        "chainId": 11155111,
+        "dailyCapBaseWei": 1000000000000000,
+        "deployBlock": 12073671,
+        "deployer": "0x410b6334F7804Ed55e8a1E00D84f6A4a216dB36E",
+        "dispatcher": "0x2bE281A806d754c2a7b5899a7effb649Fb72A07b",
+        "hook": "0x88257DA3a88Aaaf8b3EEF52112Bfb9C3596580c4",
+        "poolId": "0xca3618345392a1baca6b2d106b3ad9c7e98e8c31df872373893fe83abc6691bc",
+        "positionId": 41419,
+        "receiver": "0x4E5A6ce89eaDE86be64f1Bb095aA3b45C371C690",
+        "router": "0x488f7dFb3e39aD4ac7dbdBF5d8e503727599043f",
+        "fromBlock": 12073675,
+        "receivers": {
+          "84532": "0x9197993f0c9fc1B9920e9f1b81b4852334B2Cc83",
+          "421614": "0xa08D0621872539A8b5c0DB986BDb7367833aA6cA"
+        }
+      },
+      "identity": {
+        "authority": "0x92ceAa59dfB8Ce4A85dCECFd26e50Ba58e375600",
+        "name": "nidhi-dao.eth",
+        "subregistry": "0x562FB95c17272B850c99496e565bA5eCEDA6C656",
+        "sharedResolver": "0x0195E12dD817F97e7CF7226858F64B8a6BC9bd4A",
+        "bobResolver": "0x0faD784c4f25b3612Ad2f728632A8737aBBE4a29",
+        "carolExpiry": 1793939556,
+        "granteeWallet": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+        "grantees": "alice,bob,carol",
+        "daoResolver": "0x0D919208f68a4156E7580B9101171fa72dECaBbF",
+        "approver": "0xcb83DbB16c6C5700B59c94184E1eFe21bAFb972D",
+        "auditor": "0x031aD51C31298Cc79AAf0e225c93F1CB5924495e",
+        "auditorName": "auditor.nidhi-dao.eth"
+      }
+    }
   }
 }

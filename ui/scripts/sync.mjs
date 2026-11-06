@@ -34,7 +34,8 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
   const d = readJson(path.join(repo, "deployments", f));
   // Arbitrum's block.number is the L1 block, so take the real chain block from Forge's broadcast receipts.
   const bc = path.join(repo, "broadcast", "Deploy.s.sol", id, "run-latest.json");
-  if (fs.existsSync(bc)) {
+  // a recorded fromBlock wins: broadcast/ holds only the LATEST Deploy run on that chain (it may be another stack)
+  if (d.fromBlock === undefined && fs.existsSync(bc)) {
     const r = readJson(bc).receipts ?? [];
     const blocks = r.map((x) => Number(BigInt(x.blockNumber))).filter((n) => n > 0);
     if (blocks.length) d.fromBlock = Math.min(...blocks);
@@ -45,6 +46,31 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
   const onDisk = readJson(depPath);
   if (onDisk.fromBlock !== d.fromBlock) fs.writeFileSync(depPath, JSON.stringify({ ...onDisk, fromBlock: d.fromBlock }, null, 2) + "\n");
   deployments[id] = d;
+}
+// ---- ENSv2-gated source stack on Sepolia (deployments/ens-v4*.json), attached to the Sepolia deployment
+{
+  const stackPath = path.join(repo, "deployments", "ens-v4-stack.json");
+  const idPath = path.join(repo, "deployments", "ens-v4.json");
+  if (fs.existsSync(stackPath) && fs.existsSync(idPath) && deployments["11155111"]) {
+    const stack = readJson(stackPath);
+    if (stack.fromBlock === undefined) {
+      const bc = path.join(repo, "broadcast", "Deploy.s.sol", "11155111", "run-latest.json");
+      const r = fs.existsSync(bc) ? readJson(bc).receipts ?? [] : [];
+      const b = r.map((x) => Number(BigInt(x.blockNumber))).filter((n) => n > 0);
+      if (b.length) { stack.fromBlock = Math.min(...b); fs.writeFileSync(stackPath, JSON.stringify(stack, null, 2) + "\n"); }
+    }
+    const receivers = {};
+    for (const id of ["84532", "421614"]) {
+      const f = path.join(repo, "deployments", `ens-v4-receiver-${id}.json`);
+      if (fs.existsSync(f)) receivers[id] = readJson(f).receiver;
+    }
+    const v3 = readJson(path.join(repo, "deployments", "sepolia-ens.json"));
+    const subs = readJson(path.join(repo, "deployments", "sepolia-subnames.json"));
+    deployments["11155111"].ens = {
+      stack: { ...stack, receivers },
+      identity: { ...readJson(idPath), daoResolver: v3.resolver, approver: v3.approver, auditor: v3.auditor, auditorName: subs.auditor },
+    };
+  }
 }
 write("deployments.json", deployments);
 

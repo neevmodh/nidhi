@@ -57,10 +57,10 @@ export default function GrantDetail() {
         <section className="card span-7" aria-label="Timeline">
           <div className="card__label"><span className="label">Timeline</span></div>
           <ol className="tl">
-            <Step state="done" title="Authorised by two signers" link={data.swapTx && <ExtLink href={txUrl(src, data.swapTx)}>Swap tx</ExtLink>}>
+            <Step state="done" title={g.stack.kind === "ens" ? "Authorised by two signers holding ENS roles" : "Authorised by two signers"} link={data.swapTx && <ExtLink href={txUrl(src, data.swapTx)}>Swap tx</ExtLink>}>
               approver <span className="mono">{short(data.approver)}</span> · auditor <span className="mono">{short(data.auditor)}</span>
             </Step>
-            <Step state="done" title={`Swapped on Uniswap v4 (${src.short})`} link={<ExtLink href={addrUrl(src, src.deployment!.hook)}>Hook</ExtLink>}>
+            <Step state="done" title={`Swapped on Uniswap v4 (${src.short})`} link={<ExtLink href={addrUrl(src, g.stack.hook)}>Hook</ExtLink>}>
               the hook captured {amount(g.amount, src.payout.decimals)} {src.payout.symbol} straight into the dispatcher
             </Step>
             <Step state={sent} title="Sent by Chainlink CCIP" link={<ExtLink href={ccipUrl(g.messageId)}>CCIP explorer</ExtLink>}>
@@ -82,6 +82,7 @@ export default function GrantDetail() {
             <div className="card__label"><span className="label">Facts</span></div>
             <dl className="kv">
               <dt>Route</dt><dd><Route from={src} to={dest} /></dd>
+              <dt>Decided by</dt><dd>{g.stack.kind === "ens" ? <Link className="link" to="/app/ens">ENSv2 · nidhi-dao.eth</Link> : "DAO role registry"}</dd>
               <dt>Amount</dt><dd className="mono">{amount(g.amount, src.payout.decimals)} {src.payout.symbol}</dd>
               <dt>Grantee</dt><dd><Hash value={g.recipient} href={dest ? addrUrl(dest, g.recipient) : undefined} /></dd>
               <dt>Grant id</dt><dd><Hash value={g.id} n={8} /></dd>
