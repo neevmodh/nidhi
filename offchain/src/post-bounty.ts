@@ -9,7 +9,7 @@ import { createWalletClient, http, keccak256, parseEther, toHex, zeroAddress, ty
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { boardAbi, boardDeployment, bountySpecHash } from "./bounty.ts";
-import { RPCS, poolKey, publicClient, repoRoot, sourceStack, transport, zeroForOne } from "./stack.ts";
+import { RPCS, ensVersion, poolKey, publicClient, repoRoot, sourceStack, transport, zeroForOne } from "./stack.ts";
 
 if (fs.existsSync(path.join(repoRoot, ".env"))) process.loadEnvFile(path.join(repoRoot, ".env"));
 const quoterAbi = [{ type: "function", name: "quoteExactInputSingle", stateMutability: "nonpayable",
@@ -24,7 +24,7 @@ async function main() {
   if (!board) throw new Error("no deployments/bounty-board.json");
   const s = sourceStack();
   const pub = publicClient(s.chainId);
-  const ens = JSON.parse(fs.readFileSync(path.join(repoRoot, "deployments", "ens-v4-stack.json"), "utf8"));
+  const ens = JSON.parse(fs.readFileSync(path.join(repoRoot, "deployments", `ens-${ensVersion()}-stack.json`), "utf8"));
   const destSel = s.selectors[String(a.payTo)];
   const wei = parseEther(String(a.amountEth));
   const { result } = await pub.simulateContract({ address: s.quoter, abi: quoterAbi, functionName: "quoteExactInputSingle", args: [{ poolKey: poolKey(s), zeroForOne: zeroForOne(s), exactAmount: wei, hookData: "0x" }] });

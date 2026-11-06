@@ -122,7 +122,7 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
   }
   // on-chain milestones: the board, and the agent's executor (the only address that may execute a posted milestone)
   const bb = path.join(repo, "deployments", "bounty-board.json");
-  const ens = path.join(repo, "deployments", "ens-v4-stack.json");
+  const ens = path.join(repo, "deployments", fs.existsSync(path.join(repo, "deployments", "ens-v5-stack.json")) ? "ens-v5-stack.json" : "ens-v4-stack.json");
   out.board = fs.existsSync(bb) ? { ...readJson(bb), executor: fs.existsSync(ens) ? readJson(ens).deployer : null } : null;
   write("milestones.json", out);
 }
