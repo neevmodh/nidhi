@@ -29,7 +29,7 @@ export interface Draft {
   v: 1;
   src: number;
   /** which source stack signs and swaps: the RoleAuthority stack (default) or the ENSv2-gated one */
-  stack?: "roles" | "ens";
+  stack?: "roles" | "ens" | "hop";
   label: string;
   mandate: Mandate;
   attestation: Attestation;

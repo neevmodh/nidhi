@@ -66,6 +66,11 @@ export default function GrantDetail() {
             <Step state={sent} title="Sent by Chainlink CCIP" link={<ExtLink href={ccipUrl(g.messageId)}>CCIP explorer</ExtLink>}>
               message <span className="mono">{short(g.messageId, 8, 4)}</span> · fee {amount(g.fee, 18, 6)} ETH · {ago(g.dispatchedAt)}
             </Step>
+            {g.stack.hop && g.via && (
+              <Step state={data.relay ? (data.relay.status >= 2 ? "done" : data.relay.status === 1 ? "held" : "live") : "live"} title={`Relayed on ${g.via.short}`} link={<ExtLink href={addrUrl(g.via, g.stack.hop.relay)}>Relay</ExtLink>}>
+                {!data.relay || data.relay.status === 0 ? `waiting for CCIP to reach the relay on ${g.via.short}` : data.relay.status === 1 ? "the onward send is parked; anyone can retry it" : `forwarded to ${dest?.short}: there is no direct lane from ${src.short}`}
+              </Step>
+            )}
             <Step state={delivered} title={held ? `Payout held on ${dest?.short}` : `Paid on ${dest?.short ?? "the destination"}`} link={payout?.paidTx && dest && <ExtLink href={txUrl(dest, payout.paidTx)}>Payout tx</ExtLink>}>
               {payout && payout.outcome > 0
                 ? held ? "the transfer reverted; the funds wait in the receiver and can be retried" : <>{amount(payout.amount, dest!.payout.decimals)} {dest!.payout.symbol} reached <span className="mono">{short(g.recipient)}</span></>
@@ -81,8 +86,8 @@ export default function GrantDetail() {
           <section className="card" aria-label="Facts">
             <div className="card__label"><span className="label">Facts</span></div>
             <dl className="kv">
-              <dt>Route</dt><dd><Route from={src} to={dest} /></dd>
-              <dt>Decided by</dt><dd>{g.stack.kind === "ens" ? <Link className="link" to="/app/ens">ENSv2 · nidhi-dao.eth</Link> : "DAO role registry"}</dd>
+              <dt>Route</dt><dd><Route from={src} to={dest} />{g.via && <div className="small muted">via the {g.via.short} relay</div>}</dd>
+              <dt>Decided by</dt><dd>{g.stack.kind === "ens" ? <Link className="link" to="/app/ens">ENSv2 · nidhi-dao.eth</Link> : g.stack.kind === "hop" ? "DAO role registry, multi-hop stack" : "DAO role registry"}</dd>
               <dt>Amount</dt><dd className="mono">{amount(g.amount, src.payout.decimals)} {src.payout.symbol}</dd>
               <dt>Grantee</dt><dd><Hash value={g.recipient} href={dest ? addrUrl(dest, g.recipient) : undefined} /></dd>
               <dt>Grant id</dt><dd><Hash value={g.id} n={8} /></dd>

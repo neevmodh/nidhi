@@ -168,6 +168,12 @@ contract Deploy is Script {
             c.initTick = int24(vm.parseJsonInt(json, _p(c, ".testPool.initTickBaseIsCurrency0")));
         }
         uint256[] memory lanes = vm.parseJsonUintArray(json, _p(c, ".payoutLanes"));
+        // FEE_LANE_CHAIN: size the fee reserve on the lane this stack actually uses (a hop stack sends to one chain)
+        uint256 feeLane = vm.envOr("FEE_LANE_CHAIN", uint256(0));
+        if (feeLane != 0) {
+            lanes = new uint256[](1);
+            lanes[0] = feeLane;
+        }
         for (uint256 i; i < lanes.length && c.firstLaneSelector == 0; ++i) {
             string memory k = string.concat(".chains.", vm.toString(lanes[i]));
             if (!vm.parseJsonBool(json, string.concat(k, ".ccip.cursedAtGeneration"))) {
@@ -211,6 +217,11 @@ contract Deploy is Script {
         r.grantRole(r.GUARDIAN(), vm.addr(vm.envUint("MAINNET_GUARDIAN_PRIVATE_KEY")));
         r.grantRole(r.DEFAULT_ADMIN_ROLE(), admin);
         r.grantRole(r.GRANTEE_ADMIN(), admin);
+        // optional: name one grantee before the deployer gives up GRANTEE_ADMIN (demo stacks)
+        string memory seedLabel = vm.envOr("SEED_GRANTEE_LABEL", string(""));
+        if (bytes(seedLabel).length != 0) {
+            r.setGrantee(seedLabel, uint64(vm.envUint("SEED_GRANTEE_SELECTOR")), vm.envAddress("SEED_GRANTEE_ADDRESS"));
+        }
         r.renounceRole(r.GRANTEE_ADMIN(), deployer);
         r.renounceRole(r.DEFAULT_ADMIN_ROLE(), deployer); // the deployer keeps NO power over permissions
     }

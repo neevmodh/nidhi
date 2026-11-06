@@ -85,7 +85,8 @@ export function NewGrant() {
   const st = useChainState(chainId);
 
   const stacks = stacksOf(src);
-  const [kind, setKind] = useState<"roles" | "ens">(params.get("stack") === "ens" && stacks.some((s) => s.kind === "ens") ? "ens" : "roles");
+  const want = params.get("stack") as Stack["kind"] | null;
+  const [kind, setKind] = useState<Stack["kind"]>(want && stacks.some((s) => s.kind === want) ? want : "roles");
   const stack = stackOf(src, kind);
   const lanes = stack.lanes.filter((l) => chainById(l)?.deployment);
   const ens = ensOf(src);
@@ -158,11 +159,11 @@ export function NewGrant() {
               <div className="row row--wrap" role="radiogroup">
                 {stacks.map((s) => (
                   <button key={s.kind} role="radio" aria-checked={kind === s.kind} className={`btn ${kind === s.kind ? "btn--primary" : "btn--secondary"}`} onClick={() => setKind(s.kind)}>
-                    {s.kind === "ens" ? <><ProtocolLogo name="ens" />ENS: {ens?.name}</> : "DAO role registry"}
+                    {s.kind === "ens" ? <><ProtocolLogo name="ens" />ENS: {ens?.name}</> : s.kind === "hop" ? <><ProtocolLogo name="chainlink" />{s.label}</> : "DAO role registry"}
                   </button>
                 ))}
               </div>
-              <span className="hint">{kind === "ens" ? `Roles and grantee addresses are read live from ${ens?.name} on ENSv2.` : "Roles and grantee addresses come from the DAO's RoleAuthority."}</span>
+              <span className="hint">{kind === "ens" ? `Roles and grantee addresses are read live from ${ens?.name} on ENSv2.` : kind === "hop" ? `Pays a chain with no direct CCIP lane from ${src.short}: a relay forwards the grant and returns the receipt.` : "Roles and grantee addresses come from the DAO's RoleAuthority."}</span>
             </div>
           )}
           <div className="field">
@@ -175,7 +176,7 @@ export function NewGrant() {
           <div className="field">
             <label htmlFor="n-d">Paid on</label>
             <select id="n-d" className="select" value={dest} onChange={(e) => setDest(Number(e.target.value))}>
-              {lanes.map((l) => <option key={l} value={l}>{chainById(l)?.name}</option>)}
+              {lanes.map((l) => <option key={l} value={l}>{stack.hop ? `${chainById(stack.hop.final)?.name} via ${chainById(l)?.short} relay` : chainById(l)?.name}</option>)}
             </select>
             <span className="hint">Only chains with a live CCIP lane from {src.short} appear.</span>
           </div>

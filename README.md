@@ -59,6 +59,7 @@ are in `deployments/<chainId>.json`; chain data comes from `chains/testnets.json
 | **The AI auditor, as the ENS agent `auditor.nidhi-dao.eth`, published its attestation** to the one text record it may write | [`setText`](https://sepolia.etherscan.io/tx/0x9956a77cc937c7c33839c7882fa8de598bf8f5c296e1ad88d44ade924586c85c) |
 | **`bob.nidhi-dao.eth` got his own Permissioned Resolver**; the DAO key then gave up its setter role, so only bob controls where he is paid | [resolver](https://sepolia.etherscan.io/tx/0x4fa99ec2271f4622b63b77186131c70612912f524517d6c2ca81bb5fc01be10d) · [renounce](https://sepolia.etherscan.io/tx/0xe39eb0a174890df7e9771519cf1c9e619a58128a792a5f2cbf05c779bc570e73) |
 | **`carol.nidhi-dao.eth` registered with an expiry = her grant period**; after it, ENS stops resolving her and the hook refuses to pay | [register](https://sepolia.etherscan.io/tx/0x5de4f4a47b52aad6088d5ad189ff0911caf60106f91fbf3905c7223998a50953) |
+| **Multi-hop CCIP: Base Sepolia → Unichain Sepolia, which share no lane.** The grant goes to `NidhiHopRelay` on Arbitrum Sepolia, which forwards it to Unichain and relays the receipt back | [swap](https://sepolia.basescan.org/tx/0x47c75cf9e20812733516d2a5642f39111a476efc2b8af1f569dbb6480cc14168) · relay [`0x4696Ff14…875c`](https://sepolia.arbiscan.io/address/0x4696Ff144E66AbD4458c89947bdb7Ea656b7875c) · final receiver [`0x394A2229…ebe9`](https://unichain-sepolia.blockscout.com/address/0x394A222934a87edcBfc58d109Cb3a11Cb31Febe9) |
 | An **unregistered name (`mallory`) is refused** by the ENS-gated hook with `RecipientMismatch` | simulated against live state (`script/ens/`, nothing sent) |
 
 The first two grants carried a fixed evidence hash; the third carries the auditor's real one.
@@ -110,6 +111,7 @@ The v3 scripts are archived in [`legacy/sepolia-v3/`](legacy/sepolia-v3/).
 | CCIP inside smart contracts, changing state | A programmable token transfer pays the grantee; a second message (the ACK) moves the source ledger to `SETTLED` ([`dispatch` L120](src/NidhiDispatcher.sol#L120), [`NidhiDispatcher._ccipReceive` L182](src/NidhiDispatcher.sol#L182)) |
 | Token transfers and arbitrary messaging | Both, in both directions, over 5 live lanes between 4 testnets |
 | Liquidity across multiple chains | A hooked v4 pool on every chain, each able to pay any chain it has a lane to |
+| **Multi-hop: "send from A to B without worrying if the lane exists"** | [`NidhiHopRelay`](src/NidhiHopRelay.sol) on a middle chain forwards the grant (tokens + payload) over the next lane and returns the receipt rewritten to the source's messageId, so neither the dispatcher nor the receiver changes. Failed forwards or ACKs park and can be retried by anyone. Tested end to end on the local simulator ([`HopRelay.t.sol`](test/unit/HopRelay.t.sol)) and live: Base Sepolia → Arbitrum Sepolia → Unichain Sepolia |
 | CCIP Local Simulator | Used across the Foundry tests (`test/`) |
 | Encouraged: Automation, Data Feeds, CRE, VRF | Automation-compatible receiver queue ([`checkUpkeep` L263](src/DestinationReceiver.sol#L263)); not registered on testnet (needs LINK). Data Feeds, CRE and VRF are not used |
 
@@ -154,7 +156,7 @@ The v3 scripts are archived in [`legacy/sepolia-v3/`](legacy/sepolia-v3/).
 - **Modern signers.** It accepts EOAs, **EIP-7702-delegated EOAs** (OpenZeppelin `SignatureChecker` alone rejects them; found by the live-fork tests) and ERC-1271 smart wallets.
 - **The AI is accountable but not trusted.** A deterministic rubric over SHA-pinned GitHub evidence decides, and a **multi-model jury** (Groq, Gemini, Cerebras, optional Claude) can only veto. Amounts come from the DAO's pre-committed grant table. CI re-verifies a committed audit from scratch. `nidhi-002` (merged without an approving review) was correctly **rejected**.
 
-## Tests: 114 passing (unit, fuzz, invariant) plus fork suites
+## Tests: 121 passing (unit, fuzz, invariant) plus fork suites
 ```
 forge test                        # unit + fuzz + invariant + live Sepolia fork (fork suites need SEPOLIA_RPC_URL)
 forge coverage --no-match-contract "LiveSepolia|Spike|DrainCheck"

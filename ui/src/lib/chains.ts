@@ -106,8 +106,10 @@ export interface EnsIdentity {
   approver: Address; auditor: Address; auditorName: string;
 }
 export interface Stack {
-  kind: "roles" | "ens";
+  kind: "roles" | "ens" | "hop";
   label: string;
+  /** multi-hop: the stack sends to a relay on `via`, which forwards to `final` (no direct lane) */
+  hop?: { via: ChainId; final: ChainId; relay: Address; finalReceiver: Address };
   hook: Address; router: Address; dispatcher: Address; authority: Address;
   poolId: `0x${string}`; positionId: number; fromBlock: number;
   /** destination chain id => the receiver this stack routes to, when it differs from that chain's own receiver */
@@ -123,6 +125,11 @@ export function stacksOf(c: ChainInfo): Stack[] {
   if (e?.stack) {
     const s = e.stack;
     out.push({ kind: "ens", label: "ENSv2 · nidhi-dao.eth", hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: s.receivers, lanes: Object.keys(s.receivers ?? {}).map(Number) as ChainId[] });
+  }
+  const h = (d as any).hop;
+  if (h?.stack && h?.route) {
+    const s = h.stack, r = h.route;
+    out.push({ kind: "hop", label: `Multi-hop via ${SHORT[r.via] ?? r.via}`, hop: { via: r.via, final: r.final, relay: r.relay, finalReceiver: r.finalReceiver }, hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: { [String(r.via)]: r.relay }, lanes: [r.via] });
   }
   return out;
 }

@@ -72,6 +72,22 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
     };
   }
 }
+// ---- multi-hop source stack (deployments/hop-v4-*.json), attached to its source chain
+{
+  const stackPath = path.join(repo, "deployments", "hop-v4-stack.json");
+  const routePath = path.join(repo, "deployments", "hop-v4-route.json");
+  if (fs.existsSync(stackPath) && fs.existsSync(routePath)) {
+    const route = readJson(routePath);
+    const stack = readJson(stackPath);
+    if (stack.fromBlock === undefined) {
+      const bc = path.join(repo, "broadcast", "Deploy.s.sol", String(route.source), "run-latest.json");
+      const r = fs.existsSync(bc) ? readJson(bc).receipts ?? [] : [];
+      const b = r.map((x) => Number(BigInt(x.blockNumber))).filter((n) => n > 0);
+      if (b.length) { stack.fromBlock = Math.min(...b); fs.writeFileSync(stackPath, JSON.stringify(stack, null, 2) + "\n"); }
+    }
+    if (deployments[String(route.source)]) deployments[String(route.source)].hop = { stack, route };
+  }
+}
 write("deployments.json", deployments);
 
 // ---- audit evidence (latest run), if present

@@ -23,6 +23,8 @@ export interface Grant {
   dispatchTx: Hex;
   label?: string;
   stack: Stack;
+  /** set for multi-hop grants: the relay chain the funds pass through */
+  via?: ChainInfo;
 }
 
 export interface Payout {
@@ -60,12 +62,17 @@ async function logs<T extends (typeof EV)[keyof typeof EV]>(chainId: number, add
   return out;
 }
 
+const relayAbi = [{ type: "function", name: "getHop", stateMutability: "view", inputs: [{ type: "bytes32" }], outputs: [{ type: "tuple", components: [
+  { name: "status", type: "uint8" }, { name: "outcome", type: "uint8" }, { name: "upstreamSelector", type: "uint64" }, { name: "upstream", type: "address" },
+  { name: "token", type: "address" }, { name: "recipient", type: "address" }, { name: "amount", type: "uint128" },
+  { name: "inboundMessageId", type: "bytes32" }, { name: "onwardMessageId", type: "bytes32" }] }] }] as const;
+
 const resolveAbi = [{ type: "function", name: "resolveGrantee", stateMutability: "view", inputs: [{ type: "string" }, { type: "uint64" }], outputs: [{ type: "address" }] }] as const;
 
 /** grantee names for a stack: RoleAuthority.GranteeSet events, or the ENS subnames resolved live */
 async function labelsFor(src: ChainInfo, stack: Stack): Promise<Map<string, string>> {
   const m = new Map<string, string>();
-  if (stack.kind === "roles") {
+  if (stack.kind !== "ens") {
     for (const l of (await logs(src.id, stack.authority, EV.granteeSet)) as any[]) {
       m.set(`${l.args.destSelector}:${String(l.args.account).toLowerCase()}`, l.args.label);
     }
@@ -94,9 +101,10 @@ async function grantsOnStack(src: ChainInfo, stack: Stack): Promise<Grant[]> {
     (dispatched as any[]).map(async (l) => {
       const g = (await c.readContract({ address: stack.dispatcher, abi: nidhiDispatcherAbi, functionName: "getGrant", args: [l.args.grantId] })) as any;
       const block = await c.getBlock({ blockNumber: l.blockNumber });
-      const dest = chainBySelector(BigInt(g.destSelector));
+      const first = chainBySelector(BigInt(g.destSelector));
+      const dest = stack.hop ? chainById(stack.hop.final) : first;
       return {
-        id: l.args.grantId, src, dest, stack,
+        id: l.args.grantId, src, dest, stack, via: stack.hop ? first : undefined,
         status: Number(g.status) as Status, outcome: Number(g.outcome), amount: BigInt(g.amount), token: g.token,
         recipient: g.recipient, messageId: g.messageId, dispatchedAt: Number(block.timestamp), fee: l.args.fee,
         dispatchTx: l.transactionHash,
@@ -111,7 +119,7 @@ async function grantsOn(src: ChainInfo): Promise<Grant[]> {
 }
 
 /** the receiver a grant was routed to: the stack's own receiver for that chain, else the chain's receiver */
-export const receiverFor = (g: Grant) => (g.dest ? (g.stack.receivers?.[String(g.dest.id)] ?? g.dest.deployment?.receiver) : undefined);
+export const receiverFor = (g: Grant) => (g.stack.hop ? g.stack.hop.finalReceiver : g.dest ? (g.stack.receivers?.[String(g.dest.id)] ?? g.dest.deployment?.receiver) : undefined);
 
 export function useGrants(chainId?: number) {
   return useQuery({
@@ -156,8 +164,14 @@ export function useGrant(chainId: number, id: Hex) {
           ackTx: sent[0]?.transactionHash ?? undefined, ackMessageId: (sent[0] as any)?.args?.ackMessageId,
         };
       }
+      let relay: { status: number; outcome: number } | undefined;
+      if (g.stack.hop) {
+        const h = (await client(g.stack.hop.via).readContract({ address: g.stack.hop.relay, abi: relayAbi, functionName: "getHop", args: [g.id] })) as any;
+        relay = { status: Number(h.status), outcome: Number(h.outcome) };
+      }
       const a = auth[0] as any;
       return {
+        relay,
         grant: g,
         approver: a?.args?.approver as Address | undefined,
         auditor: a?.args?.auditor as Address | undefined,

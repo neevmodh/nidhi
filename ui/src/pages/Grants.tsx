@@ -57,7 +57,7 @@ export default function Grants() {
                 <tr key={`${g.src.id}-${g.id}`} data-href onClick={() => nav(`/app/grants/${g.src.key}/${g.id}`)}>
                   <td className="mono">{short(g.id, 6, 4)}</td>
                   <td>{g.label ? <span>{g.label}</span> : <span className="mono">{short(g.recipient)}</span>}</td>
-                  <td><Route from={g.src} to={g.dest} /></td>
+                  <td><Route from={g.src} to={g.dest} />{g.via && <div className="small muted">via the {g.via.short} relay</div>}</td>
                   <td className="mono">{amount(g.amount, g.src.payout.decimals)} {g.src.payout.symbol}</td>
                   <td><StatusChip status={g.status} /></td>
                   <td className="muted small">{ago(g.dispatchedAt)}</td>
