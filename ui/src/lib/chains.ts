@@ -115,6 +115,8 @@ export interface Stack {
   /** destination chain id => the receiver this stack routes to, when it differs from that chain's own receiver */
   receivers?: Record<string, Address>;
   lanes: ChainId[];
+  /** an earlier deployment: still read for history, never offered for new grants */
+  retired?: boolean;
 }
 
 export function stacksOf(c: ChainInfo): Stack[] {
@@ -124,7 +126,7 @@ export function stacksOf(c: ChainInfo): Stack[] {
   const e = (d as any).ens;
   // the current ENS stack first (stackOf picks it), then earlier ones, still read for their history
   for (const [i, s] of [e?.stack, ...(e?.previous ?? [])].filter(Boolean).entries()) {
-    out.push({ kind: "ens", label: i === 0 ? "ENSv2 · nidhi-dao.eth" : `ENSv2 · nidhi-dao.eth (${s.version ?? "earlier"})`, hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: s.receivers, lanes: Object.keys(s.receivers ?? {}).map(Number) as ChainId[] });
+    out.push({ kind: "ens", label: i === 0 ? "ENSv2 · nidhi-dao.eth" : `ENSv2 · nidhi-dao.eth (${s.version ?? "earlier"})`, hook: s.hook, router: s.router, dispatcher: s.dispatcher, authority: s.authority, poolId: s.poolId, positionId: s.positionId, fromBlock: s.fromBlock, receivers: s.receivers, lanes: Object.keys(s.receivers ?? {}).map(Number) as ChainId[], retired: i > 0 });
   }
   const h = (d as any).hop;
   if (h?.stack && h?.route) {
