@@ -1,0 +1,15 @@
+{
+  "admin": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+  "authority": "0x11252C994ccba7BE458D78C8901dAD6B5D1F0216",
+  "chainId": 421614,
+  "dailyCapBaseWei": 1000000000000000,
+  "deployBlock": 12071601,
+  "deployer": "0x410b6334F7804Ed55e8a1E00D84f6A4a216dB36E",
+  "dispatcher": "0xB2ab0955a101802Bc9e2F1ec099Bd74Aed9bD36A",
+  "hook": "0x56d56254A518142375E9eA9a69f310aB8D7b80c4",
+  "poolId": "0xe9226163c089da59f80d2c5e541ad387aa2c339b68a272eee77d0dd1621f57cd",
+  "positionId": 728,
+  "receiver": "0xd52365cA8Fa5Cf07f3Bd9dFd64c024E455F4D6B9",
+  "router": "0x8C507e4407466A2550E16EAe3a6BE8ABAa5C13BE",
+  "fromBlock": 326394950
+}

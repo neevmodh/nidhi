@@ -7,6 +7,7 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
+import {IV4Quoter} from "@uniswap/v4-periphery/src/interfaces/IV4Quoter.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PoolId} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
@@ -33,8 +34,8 @@ interface IWETH9Demo {
 ///     evidence hashes, recipient and amount all come from it - i.e. from the DAO's pre-committed grant table -
 ///     and the AI auditor's own signature is used. Otherwise a demo grant is built from env vars.
 ///   - The APPROVER signs the Mandate. The deployer is the executor that submits the swap.
-///   - minOut/maxOut is a +/-1% band around an exact quote computed from live pool state with v4's SqrtPriceMath
-///     (includes the 0.30% fee and price impact). The hook reverts the whole payout if output leaves the band.
+///   - minOut/maxOut is a +/-1% band around an exact quote from Uniswap's canonical V4Quoter (includes the 0.30% fee
+///     and price impact). The hook reverts the whole payout if output leaves the band.
 /// forge script script/05_Demo.s.sol --rpc-url sepolia --broadcast
 contract Demo is NidhiScript {
     using StateLibrary for IPoolManager;
@@ -118,7 +119,6 @@ contract Demo is NidhiScript {
 
     function _mandate(Attestation memory a, address executor, address recipient, uint128 amountIn)
         internal
-        view
         returns (Mandate memory)
     {
         return _mandateAt(a, executor, recipient, amountIn, 0);
@@ -128,7 +128,6 @@ contract Demo is NidhiScript {
     /// its band is the exact marginal quote quote(prior + amount) - quote(prior).
     function _mandateAt(Attestation memory a, address executor, address recipient, uint128 amountIn, uint128 priorIn)
         internal
-        view
         returns (Mandate memory)
     {
         uint256 quote = _quote(priorIn + amountIn) - (priorIn == 0 ? 0 : _quote(priorIn));
@@ -150,8 +149,14 @@ contract Demo is NidhiScript {
         });
     }
 
-    /// Exact-input quote for WETH -> CCIP-BnM against the single full-range position (no tick crossing).
-    function _quote(uint128 amountIn) internal view returns (uint256) {
+    /// Exact-input quote from Uniswap's canonical V4Quoter (the hook lets it simulate; it can never move funds).
+    /// Falls back to closed-form SqrtPriceMath against the single full-range position if the quoter is unavailable.
+    function _quote(uint128 amountIn) internal returns (uint256) {
+        try IV4Quoter(SEP_V4_QUOTER).quoteExactInputSingle(
+            IV4Quoter.QuoteExactSingleParams({poolKey: key, zeroForOne: true, exactAmount: amountIn, hookData: ""})
+        ) returns (uint256 amountOut, uint256) {
+            if (amountOut > 0) return amountOut;
+        } catch {}
         IPoolManager pm = IPoolManager(SEP_POOL_MANAGER);
         (uint160 sqrtP,,,) = pm.getSlot0(PoolId.wrap(poolId));
         uint128 liquidity = pm.getLiquidity(PoolId.wrap(poolId));

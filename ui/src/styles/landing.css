@@ -1,0 +1,30 @@
+/* public page: one section per screen, equal edges */
+.landing .screen { min-height: 100svh; padding: calc(var(--nav) + 96px) 0 72px; display: flex; flex-direction: column; justify-content: center; }
+.landing .screen + .screen { border-top: 1px solid var(--line); }
+.landing .h2 .muted { display: block; font-size: .5em; letter-spacing: 0; margin-top: 12px; font-family: var(--f-text); }
+
+.hero { position: relative; overflow: hidden; }
+.hero::before { /* a lamp-glow, warm and faint; never purple */
+  content: ""; position: absolute; width: 900px; height: 900px; right: -200px; top: -240px;
+  background: radial-gradient(closest-side, var(--glow), transparent 70%); pointer-events: none;
+}
+.hero__in { display: grid; grid-template-columns: 7fr 5fr; gap: 64px; align-items: center; position: relative; }
+.hero__words .h1 { max-width: 13ch; }
+@media (max-width: 1023px) { .hero__in { grid-template-columns: 1fr; gap: 48px; } .hero__words .h1 { max-width: 16ch; } }
+
+.appframe { background: var(--g-raise); border: 1px solid var(--line-strong); border-radius: var(--r-win); overflow: hidden; }
+.appframe__bar { height: 40px; display: flex; align-items: center; gap: 6px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--g-alt); }
+.appframe__bar span { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); }
+.appframe__bar p { margin-left: 12px; font-family: var(--f-mono); font-size: 13px; }
+.appframe__body { padding: 28px; }
+.appframe .tl li { grid-template-columns: 24px 1fr auto; }
+
+.diagram { width: 100%; height: auto; }
+.diagram path { fill: none; stroke-width: 1.5; }
+.dg-t { font: 500 12px var(--f-mono); fill: var(--ink); }
+.dg-flow { stroke-dasharray: 4 6; animation: dg 3s linear infinite; }
+@keyframes dg { to { stroke-dashoffset: -40; } }
+.how:hover .dg-flow { animation-duration: 1.6s; }
+
+.close__in { display: grid; justify-items: start; gap: 24px; }
+@media (max-width: 640px) { .landing .screen { min-height: auto; padding: calc(var(--nav) + 64px) 0 56px; } }

@@ -34,18 +34,20 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
         address recipient;
         uint128 amount;
         bytes32 messageId; // source CCIP messageId
+        uint64 srcSelector; // chain the grant came from; the ACK goes back there
+        address token; // the (destination-chain) token that arrived
     }
 
     /// @notice Max grants handled per performUpkeep (bounds gas; the queue drains over several upkeeps).
     uint256 public constant MAX_BATCH = 10;
 
-    uint64 public immutable sourceChainSelector;
-    /// @notice Destination-chain representation of the bridged token (e.g. CCIP-BnM on Base Sepolia).
-    address public immutable token;
     /// @notice Fee token for ACK fees: LINK, or address(0) for native.
     address public immutable feeToken;
 
-    address public sourceDispatcher; // set once
+    /// @notice source chain selector => NidhiDispatcher there. Add-only.
+    mapping(uint64 srcSelector => address dispatcher) public sourceDispatchers;
+    /// @notice Tokens this receiver will pay out (destination-chain representation). Add-only.
+    mapping(address token => bool) public allowedToken;
     uint32 public ackGasLimit = 200_000;
     bool public payoutsPaused;
 
@@ -55,7 +57,8 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     bytes32[] internal _queue;
     mapping(bytes32 grantId => uint256) internal _queueIndex;
 
-    event SourceDispatcherSet(address dispatcher);
+    event SourceAdded(uint64 indexed srcSelector, address dispatcher);
+    event TokenAllowed(address indexed token);
     event PayoutsPaused(bool paused);
     event GrantReceived(bytes32 indexed grantId, bytes32 indexed messageId, address recipient, uint256 amount);
     event PayoutSucceeded(bytes32 indexed grantId, address indexed recipient, uint256 amount);
@@ -77,13 +80,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     error InsufficientFee(uint256 have, uint256 need);
     error Paused();
 
-    constructor(address router_, uint64 sourceChainSelector_, address token_, address feeToken_, address owner_)
-        CCIPReceiver(router_)
-        Ownable(owner_)
-    {
-        if (token_ == address(0)) revert ZeroAddress();
-        sourceChainSelector = sourceChainSelector_;
-        token = token_;
+    constructor(address router_, address feeToken_, address owner_) CCIPReceiver(router_) Ownable(owner_) {
         feeToken = feeToken_;
     }
 
@@ -91,11 +88,20 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
 
     // ------------------------------------------------------------------ admin
 
-    function setSourceDispatcher(address dispatcher_) external onlyOwner {
-        if (sourceDispatcher != address(0)) revert AlreadySet();
-        if (dispatcher_ == address(0)) revert ZeroAddress();
-        sourceDispatcher = dispatcher_;
-        emit SourceDispatcherSet(dispatcher_);
+    /// @notice Trust a NidhiDispatcher on a source chain. Add-only (no overwrite).
+    function addSource(uint64 srcSelector, address dispatcher_) external onlyOwner {
+        if (sourceDispatchers[srcSelector] != address(0)) revert AlreadySet();
+        if (dispatcher_ == address(0) || srcSelector == 0) revert ZeroAddress();
+        sourceDispatchers[srcSelector] = dispatcher_;
+        emit SourceAdded(srcSelector, dispatcher_);
+    }
+
+    /// @notice Allow a token to be paid out. Add-only.
+    function allowToken(address token_) external onlyOwner {
+        if (token_ == address(0)) revert ZeroAddress();
+        if (allowedToken[token_]) revert AlreadySet();
+        allowedToken[token_] = true;
+        emit TokenAllowed(token_);
     }
 
     /// @notice Circuit breaker: while paused, arriving grants are HELD (not paid, not reverted).
@@ -112,10 +118,9 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
 
     function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
         address sender = abi.decode(message.sender, (address));
-        if (message.sourceChainSelector != sourceChainSelector || sender != sourceDispatcher || sender == address(0)) {
-            revert UnknownSource(message.sourceChainSelector, sender);
-        }
-        if (message.destTokenAmounts.length != 1 || message.destTokenAmounts[0].token != token) {
+        address expected = sourceDispatchers[message.sourceChainSelector];
+        if (expected == address(0) || sender != expected) revert UnknownSource(message.sourceChainSelector, sender);
+        if (message.destTokenAmounts.length != 1 || !allowedToken[message.destTokenAmounts[0].token]) {
             revert UnexpectedTokens();
         }
 
@@ -128,6 +133,8 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
         p.recipient = recipient;
         p.amount = SafeCast.toUint128(amount);
         p.messageId = message.messageId;
+        p.srcSelector = message.sourceChainSelector;
+        p.token = message.destTokenAmounts[0].token;
         emit GrantReceived(grantId, message.messageId, recipient, amount);
 
         if (payoutsPaused) {
@@ -135,7 +142,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
             emit PayoutHeld(grantId, recipient, amount, abi.encodeWithSelector(Paused.selector));
         } else {
             p.outcome = AckLib.PAID; // optimistic, written before the external call (checks-effects-interactions)
-            try this.executePayout(recipient, amount) {
+            try this.executePayout(p.token, recipient, amount) {
                 emit PayoutSucceeded(grantId, recipient, amount);
             } catch (bytes memory reason) {
                 p.outcome = AckLib.HELD;
@@ -147,9 +154,9 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     }
 
     /// @dev External only so it can be wrapped in try/catch; callable solely by this contract.
-    function executePayout(address to, uint256 amount) external {
+    function executePayout(address token_, address to, uint256 amount) external {
         if (msg.sender != address(this)) revert OnlySelf();
-        IERC20(token).safeTransfer(to, amount);
+        IERC20(token_).safeTransfer(to, amount);
     }
 
     // ------------------------------------------------------------------ held funds
@@ -164,7 +171,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
     function _payHeld(bytes32 grantId) private {
         Payout storage p = _payouts[grantId];
         p.outcome = AckLib.PAID;
-        IERC20(token).safeTransfer(p.recipient, p.amount);
+        IERC20(p.token).safeTransfer(p.recipient, p.amount);
         emit PayoutSucceeded(grantId, p.recipient, p.amount);
         _ack(grantId);
     }
@@ -175,7 +182,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
         Payout storage p = _payouts[grantId];
         if (p.outcome != AckLib.HELD) revert NotHeld(grantId);
         p.outcome = AckLib.RECOVERED;
-        IERC20(token).safeTransfer(to, p.amount);
+        IERC20(p.token).safeTransfer(to, p.amount);
         emit PayoutRecovered(grantId, to, p.amount);
         _ack(grantId);
     }
@@ -206,7 +213,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
         Payout storage p = _payouts[grantId];
 
         Client.EVM2AnyMessage memory message = Client.EVM2AnyMessage({
-            receiver: abi.encode(sourceDispatcher),
+            receiver: abi.encode(sourceDispatchers[p.srcSelector]),
             data: AckLib.encodeAck(grantId, p.messageId, p.amount, p.outcome),
             tokenAmounts: new Client.EVMTokenAmount[](0),
             feeToken: feeToken,
@@ -214,15 +221,15 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
         });
 
         IRouterClient router = IRouterClient(getRouter());
-        uint256 fee = router.getFee(sourceChainSelector, message);
+        uint256 fee = router.getFee(p.srcSelector, message);
         if (feeToken == address(0)) {
             if (address(this).balance < fee) revert InsufficientFee(address(this).balance, fee);
-            return router.ccipSend{value: fee}(sourceChainSelector, message);
+            return router.ccipSend{value: fee}(p.srcSelector, message);
         }
         uint256 feeBal = IERC20(feeToken).balanceOf(address(this));
         if (feeBal < fee) revert InsufficientFee(feeBal, fee);
         IERC20(feeToken).forceApprove(address(router), fee);
-        return router.ccipSend(sourceChainSelector, message);
+        return router.ccipSend(p.srcSelector, message);
     }
 
     // ------------------------------------------------------------------ self-healing (Chainlink Automation)
@@ -304,7 +311,7 @@ contract DestinationReceiver is CCIPReceiver, Ownable2Step, AutomationCompatible
             (bool ok,) = to.call{value: amount}("");
             require(ok, "native transfer failed");
         } else {
-            if (feeToken == token) revert UnexpectedTokens();
+            if (allowedToken[feeToken]) revert UnexpectedTokens(); // never drain a grant token as "fees"
             IERC20(feeToken).safeTransfer(to, amount);
         }
     }

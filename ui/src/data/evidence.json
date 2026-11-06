@@ -1,0 +1,198 @@
+{
+  "grant": {
+    "amountInWei": "100000000000000",
+    "grantee": "alice",
+    "note": "v2 grant, paid and SETTLED on 2026-11-05",
+    "pr": 90,
+    "repo": "Uniswap/v4-template",
+    "requiredPathGlobs": [
+      "script/**"
+    ],
+    "rfp": "rfp/nidhi-001.md"
+  },
+  "grantId": "0x3f4e54a6732c2a21ed7df7b2c26a4238705face3fa643fa58dba232ad79b8df5",
+  "grantLabel": "nidhi-001",
+  "hashes": {
+    "evidenceHash": "0xefe25d5a1428587175eb360a02d4ec5bf6369448711b429f201d803ae9416998",
+    "inputsHash": "0x1aa5f5e7cca8f817caf42c9d905f57a0066232ecb0b656d90a85a4f482fe9609",
+    "modelHash": "0x21ad3f7c7a09ee812916ea759bdb2cfab8d33a6ade4065d1cac3633335ced46e",
+    "outputHash": "0x419b5ac3bb205705a54bcac8bee264e4b195fac54d945e804f82bce8f035e5a6",
+    "promptHash": "0xf27d22de16d9c3e053f4de3fa1bfbbe726e9351e3f61178b25c767e60558fa79",
+    "rubricHash": "0xf5e63652753f2fe2d6e0b367d85622a63e7dff60b170bf21a7a141939fc49f19"
+  },
+  "inputs": {
+    "diffHash": "0x0b4dd8ab0aef32d070a372cd8218dc3f6cd897aea5b53dcfe29b73dc5bcdb14c",
+    "evidence": {
+      "approvals": 1,
+      "author": "akshatmittal",
+      "checks": [],
+      "files": [
+        {
+          "additions": 3,
+          "deletions": 3,
+          "filename": "foundry.lock",
+          "sha": "ec9f31c1a652a447eac693bf46f3261ce72cc822",
+          "status": "modified"
+        },
+        {
+          "additions": 2,
+          "deletions": 2,
+          "filename": "foundry.toml",
+          "sha": "5f3c473fd159294184542dc8ec8a938d3f504c0d",
+          "status": "modified"
+        },
+        {
+          "additions": 2,
+          "deletions": 3,
+          "filename": "README.md",
+          "sha": "91da0c2497f9d81a1896d476c5ad8ea413571be4",
+          "status": "modified"
+        },
+        {
+          "additions": 27,
+          "deletions": 19,
+          "filename": "script/base/BaseScript.sol",
+          "sha": "af30343cac9eb98c332bcaf73e4f7a64edcfd677",
+          "status": "modified"
+        },
+        {
+          "additions": 37,
+          "deletions": 0,
+          "filename": "script/testing/00_DeployV4.s.sol",
+          "sha": "daf95a19354e5a881da92704c48ee8d21debe8b0",
+          "status": "added"
+        },
+        {
+          "additions": 3,
+          "deletions": 3,
+          "filename": "test/Counter.t.sol",
+          "sha": "c5fa30d1d4dcfe12f22afa84026c754cc4b51804",
+          "status": "modified"
+        },
+        {
+          "additions": 29,
+          "deletions": 0,
+          "filename": "test/utils/BaseTest.sol",
+          "sha": "68d452387b4be212b54fd286c31ae57239fc5b89",
+          "status": "added"
+        },
+        {
+          "additions": 12,
+          "deletions": 24,
+          "filename": "test/utils/Deployers.sol",
+          "sha": "d1929a0415a39eca9cf118934b00c3f527b95a97",
+          "status": "modified"
+        },
+        {
+          "additions": 2,
+          "deletions": 3,
+          "filename": "test/utils/libraries/EasyPosm.t.sol",
+          "sha": "9ff04bc70c1e646bcceeba9e5255992ca79ece02",
+          "status": "modified"
+        }
+      ],
+      "headSha": "cfce1b82baf55b14e17e75486a085322270ef35a",
+      "mergeCommitSha": "1fbf95547791f0821a170b88c750cb2e04e6818b",
+      "merged": true,
+      "mergedAt": "2025-10-28T13:28:32Z",
+      "pr": 90,
+      "repo": "Uniswap/v4-template",
+      "title": "Update scripts for smoother local + live execution"
+    },
+    "pr": 90,
+    "repo": "Uniswap/v4-template",
+    "rfpHash": "0xf2dc52e187b0e8f53e5f5db3162e1af68ffa9a85f9562117df561d05f2b105af"
+  },
+  "issuedAt": 1793933719,
+  "output": {
+    "jury": {
+      "inconsistentVotes": 0,
+      "jurors": [
+        {
+          "model": "openai/gpt-oss-120b",
+          "provider": "groq",
+          "review": {
+            "concerns": [
+              "Cannot confirm that the PR is merged into the default branch from the diff alone.",
+              "No CI run results are provided, so it is unknown whether all checks pass.",
+              "The changes focus on local‑only behavior (e.g., block.chainid == 31337) and do not clearly address live‑network execution reliability.",
+              "No evidence that existing deployment scripts (e.g., script/00_DeployHook.s.sol) were updated to use the new utilities, so overall script reliability may not be fully improved."
+            ],
+            "summary": "The diff modifies files in the script/ directory and adds utilities intended to make local deployments more reliable, suggesting progress toward the RFP goal. However, the diff alone does not demonstrate that the scripts now run reliably on both a local node and a live network, nor does it provide evidence that the pull request is merged into the default branch or that CI passes.",
+            "verdict": "insufficient_evidence"
+          },
+          "status": "reviewed"
+        },
+        {
+          "provider": "gemini",
+          "reason": "HTTP 503: {\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later",
+          "status": "unavailable"
+        },
+        {
+          "provider": "cerebras",
+          "reason": "no API key configured",
+          "status": "unavailable"
+        },
+        {
+          "provider": "anthropic",
+          "reason": "no API key configured",
+          "status": "unavailable"
+        }
+      ],
+      "reviewed": 1,
+      "veto": false,
+      "vetoThreshold": 1
+    },
+    "pass": true,
+    "results": [
+      {
+        "detail": "merged=true",
+        "pass": true,
+        "rule": "requireMerged"
+      },
+      {
+        "detail": "1 approval(s), need 1",
+        "pass": true,
+        "rule": "minApprovals"
+      },
+      {
+        "detail": "0 check(s), none failed",
+        "pass": true,
+        "rule": "requireNoFailedChecks"
+      },
+      {
+        "detail": "2 file(s) match",
+        "pass": true,
+        "rule": "touches:script/**"
+      },
+      {
+        "detail": "9 file(s) changed, max 60",
+        "pass": true,
+        "rule": "maxFilesChanged"
+      }
+    ],
+    "valuation": {
+      "at": "2026-11-06T02:55:19.688Z",
+      "pair": "WETH->USDC (chain 1)",
+      "source": "uniswap-trading-api",
+      "usd": 0.224126
+    }
+  },
+  "rubric": {
+    "description": "Deterministic acceptance rules. The pass/fail decision is made here, never by the LLM.",
+    "llm": {
+      "note": "The LLM may veto (verdict=inconsistent) but cannot pass a deliverable that fails a rule, and never sets an amount or recipient.",
+      "role": "advisory-veto-only"
+    },
+    "note": "Path requirements are per grant (grants.json: requiredPathGlobs), committed by the DAO before the audit.",
+    "rules": {
+      "maxFilesChanged": 60,
+      "minApprovals": 1,
+      "requireMerged": true,
+      "requireNoFailedChecks": true,
+      "requiredPathGlobs": []
+    },
+    "version": 1
+  },
+  "systemPrompt": "You are an independent auditor for a DAO grant program.\nYou receive a request for proposals (RFP) and the full diff of a merged pull request submitted as the deliverable.\nDecide whether the diff plausibly fulfils the RFP's stated deliverable and acceptance criteria.\nYou do not decide payment amounts or recipients and must not comment on them.\nReport every concrete concern you notice; downstream rules filter them.\nAnswer \"inconsistent\" only when the diff clearly does not deliver what the RFP asks for.\nAnswer \"insufficient_evidence\" when the diff alone cannot show it either way.\nRespond with ONLY a JSON object: {\"verdict\": \"consistent\" | \"inconsistent\" | \"insufficient_evidence\", \"summary\": string, \"concerns\": string[]}."
+}

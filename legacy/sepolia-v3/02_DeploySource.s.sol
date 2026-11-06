@@ -93,7 +93,8 @@ contract DeploySource is NidhiScript {
             INidhiDispatcher(address(d.dispatcher)),
             address(d.router),
             deployer,
-            _dailyCap()
+            _dailyCap(),
+            SEP_V4_QUOTER
         );
         (address predicted, bytes32 salt) = HookMiner.find(CREATE2_DEPLOYER, flags, type(NidhiHook).creationCode, args);
         d.hook = new NidhiHook{salt: salt}(
@@ -102,7 +103,8 @@ contract DeploySource is NidhiScript {
             INidhiDispatcher(address(d.dispatcher)),
             address(d.router),
             deployer,
-            _dailyCap()
+            _dailyCap(),
+            SEP_V4_QUOTER
         );
         require(address(d.hook) == predicted, "hook address mismatch");
         d.dispatcher.setHook(address(d.hook));
@@ -156,19 +158,31 @@ contract DeploySource is NidhiScript {
         IPermissionedResolver r = IPermissionedResolver(daoResolver);
         r.grantSetterRoles(abi.encodeCall(IPermissionedResolver.setText, (dns, "nidhi.role.guardian", "")), guardian);
 
-        string[5] memory keys = [
+        string[11] memory keys = [
             "nidhi.contract.hook",
             "nidhi.contract.dispatcher",
             "nidhi.contract.router",
             "nidhi.contract.authority",
-            "nidhi.contract.poolId"
+            "nidhi.contract.poolId",
+            "nidhi.contract.positionId",
+            "nidhi.contract.deployBlock",
+            "nidhi.pool.currency0",
+            "nidhi.pool.currency1",
+            "nidhi.pool.fee",
+            "nidhi.pool.tickSpacing"
         ];
-        string[5] memory vals = [
+        string[11] memory vals = [
             vm.toString(address(d.hook)),
             vm.toString(address(d.dispatcher)),
             vm.toString(address(d.router)),
             vm.toString(address(d.authority)),
-            vm.toString(PoolId.unwrap(d.key.toId()))
+            vm.toString(PoolId.unwrap(d.key.toId())),
+            vm.toString(d.positionId),
+            vm.toString(block.number),
+            vm.toString(SEP_WETH),
+            vm.toString(SEP_BNM),
+            vm.toString(uint256(FEE)),
+            vm.toString(int256(TICK_SPACING))
         ];
         for (uint256 i; i < keys.length; ++i) {
             r.grantSetterRoles(abi.encodeCall(IPermissionedResolver.setText, (dns, keys[i], "")), deployer);

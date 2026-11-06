@@ -13,6 +13,7 @@ interface IGrantAuthority {
 
     function isAuthorized(bytes32 role, address account) external view returns (bool);
 
-    /// @notice Address that the grantee subname `<label>.<dao>.eth` resolves to on the payout chain (0 if none).
-    function resolveGrantee(string calldata label) external view returns (address);
+    /// @notice Address that grantee `label` is paid at on the destination chain `destSelector` (0 if none).
+    ///         ENSv2Authority: `<label>.<dao>.eth` -> addr(node, ENSIP-11 coin type). RoleAuthority: DAO-managed book.
+    function resolveGrantee(string calldata label, uint64 destSelector) external view returns (address);
 }

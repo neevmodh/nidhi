@@ -12,6 +12,7 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {HookMiner} from "@uniswap/v4-periphery/src/utils/HookMiner.sol";
+import {IV4Quoter} from "@uniswap/v4-periphery/src/interfaces/IV4Quoter.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {CCIPLocalSimulator} from "@chainlink/local/src/ccip/CCIPLocalSimulator.sol";
 import {BurnMintERC677Helper} from "@chainlink/local/src/ccip/BurnMintERC677Helper.sol";
@@ -23,7 +24,7 @@ import {NidhiSwapRouter} from "../../src/NidhiSwapRouter.sol";
 import {NidhiDispatcher} from "../../src/NidhiDispatcher.sol";
 import {DestinationReceiver} from "../../src/DestinationReceiver.sol";
 import {Mandate, Attestation} from "../../src/libraries/Mandate.sol";
-import {IVerifiableFactory, IPermissionedResolver, IETHRegistrar, IMockUSDC} from "../../script/ens/IENSv2.sol";
+import {IVerifiableFactory, IPermissionedResolver, IETHRegistrar, IMockUSDC} from "../interfaces/IENSv2.sol";
 
 interface IUserRegistryLike {
     function setSubregistry(uint256 anyId, address registry) external;
@@ -55,7 +56,9 @@ contract LiveSepoliaTest is Test {
     address constant ENS_USDC = 0x240b0316Df57887DBBE58b586508b19e633a14aa;
     uint256 constant ROLE_SET_TEXT = 1 << 4;
     address constant USER_REGISTRY_IMPL = 0x9BD8a88719068D09ecee662f36C0E3856708366a;
+    uint64 constant BASE_SEPOLIA_SELECTOR = 10344971235874465080;
     uint256 constant COIN_BASE_SEPOLIA = 0x80000000 | 84532;
+    address constant LIVE_QUOTER = 0x68aFa8b853cAa7a2D40B0F6AEE5C4DbC147C8244; // Uniswap V4Quoter (Sepolia)
 
     bool internal forked;
     string internal label;
@@ -73,7 +76,11 @@ contract LiveSepoliaTest is Test {
         label = string.concat("nidhi-fork-", vm.toString(block.number));
         _registerDaoName();
         _registerGrantee("alice", grantee);
-        authority = new ENSv2Authority(IENSv2Registry(ENS_REGISTRY), label, COIN_BASE_SEPOLIA);
+        uint64[] memory sels = new uint64[](1);
+        uint256[] memory coins = new uint256[](1);
+        sels[0] = BASE_SEPOLIA_SELECTOR;
+        coins[0] = COIN_BASE_SEPOLIA;
+        authority = new ENSv2Authority(IENSv2Registry(ENS_REGISTRY), label, sels, coins);
     }
 
     modifier onlyFork() {
@@ -94,8 +101,16 @@ contract LiveSepoliaTest is Test {
     }
 
     function test_live_granteeSubnameResolvesOnChain() public onlyFork {
-        assertEq(authority.resolveGrantee("alice"), grantee, "alice.<dao>.eth -> Base addr via live ENSv2");
-        assertEq(authority.resolveGrantee("bob"), address(0), "unregistered subname resolves to nothing");
+        assertEq(
+            authority.resolveGrantee("alice", BASE_SEPOLIA_SELECTOR),
+            grantee,
+            "alice.<dao>.eth -> Base addr via live ENSv2"
+        );
+        assertEq(
+            authority.resolveGrantee("bob", BASE_SEPOLIA_SELECTOR),
+            address(0),
+            "unregistered subname resolves to nothing"
+        );
     }
 
     function test_live_ensRevocationIsImmediate() public onlyFork {
@@ -141,27 +156,58 @@ contract LiveSepoliaTest is Test {
         assertEq(bnm.balanceOf(address(hook)) + bnm.balanceOf(address(dispatcher)), 0);
     }
 
+    /// The LIVE Uniswap V4Quoter prices the gated pool; a mandate pinned to that exact quote pays exactly that.
+    function test_live_officialQuoterPricesGrantExactly() public onlyFork {
+        _deploySystem();
+        _seedPool();
+        (uint256 quoted,) = IV4Quoter(LIVE_QUOTER)
+            .quoteExactInputSingle(
+                IV4Quoter.QuoteExactSingleParams({
+                    poolKey: key, zeroForOne: zeroForOne, exactAmount: 0.01 ether, hookData: ""
+                })
+            );
+        Mandate memory m = _liveMandate();
+        m.minOut = uint128(quoted);
+        m.maxOut = uint128(quoted);
+        bytes memory hookData = _liveHookData(m);
+        vm.prank(executor);
+        nidhiRouter.swap(key, _liveParams(m.amountIn), hookData, block.timestamp);
+        assertEq(bnm.balanceOf(grantee), quoted, "paid exactly the official quote");
+    }
+
     function _deploySystem() internal {
         CCIPLocalSimulator sim = new CCIPLocalSimulator();
         IRouterClient router;
         (sel, router,,,, bnm,) = sim.configuration();
+        // the grant travels over the local simulator's selector: map it to the grantee's Base Sepolia address,
+        // since ENSv2Authority resolves per destination chain and fails closed for any unmapped one
+        uint64[] memory sels = new uint64[](1);
+        uint256[] memory coins = new uint256[](1);
+        sels[0] = sel;
+        coins[0] = COIN_BASE_SEPOLIA;
+        authority = new ENSv2Authority(IENSv2Registry(ENS_REGISTRY), label, sels, coins);
         weth = new MockERC20("WETH", "WETH", 18);
 
         nidhiRouter = new NidhiSwapRouter(manager);
-        dispatcher = new NidhiDispatcher(address(router), address(0), sel, dao);
-        receiver = new DestinationReceiver(address(router), sel, address(bnm), address(0), dao);
+        dispatcher = new NidhiDispatcher(address(router), address(0), dao);
+        receiver = new DestinationReceiver(address(router), address(0), dao);
 
         // Mine a real hook address exactly as the deploy script does.
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG);
-        bytes memory args = abi.encode(manager, authority, dispatcher, address(nidhiRouter), dao, uint256(1 ether));
+        bytes memory args = abi.encode(
+            manager, authority, dispatcher, address(nidhiRouter), dao, uint256(1 ether), LIVE_QUOTER, _noGuard()
+        );
         (address hookAddr, bytes32 salt) = HookMiner.find(address(this), flags, type(NidhiHook).creationCode, args);
-        hook = new NidhiHook{salt: salt}(manager, authority, dispatcher, address(nidhiRouter), dao, 1 ether);
+        hook = new NidhiHook{salt: salt}(
+            manager, authority, dispatcher, address(nidhiRouter), dao, 1 ether, LIVE_QUOTER, _noGuard()
+        );
         assertEq(address(hook), hookAddr, "mined address");
 
         vm.startPrank(dao);
         dispatcher.setHook(address(hook));
-        dispatcher.setDestReceiver(address(receiver));
-        receiver.setSourceDispatcher(address(dispatcher));
+        dispatcher.addDestination(sel, address(receiver));
+        receiver.addSource(sel, address(dispatcher));
+        receiver.allowToken(address(bnm));
         vm.stopPrank();
     }
 
@@ -294,6 +340,10 @@ contract LiveSepoliaTest is Test {
         );
         IAddrSetter(gres).setAddress(dns, COIN_BASE_SEPOLIA, abi.encodePacked(wallet));
         vm.stopPrank();
+    }
+
+    function _noGuard() internal pure returns (NidhiHook.ReferenceGuard memory g) {
+        return g;
     }
 
     function _sign(uint256 pk, bytes32 digest) internal pure returns (bytes memory) {

@@ -30,6 +30,10 @@ abstract contract NidhiScript is Script {
     // ---------------------------------------------------------------- Uniswap v4 periphery (Sepolia)
     address constant SEP_POSITION_MANAGER = 0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4;
     address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    // developers.uniswap.org/docs/protocols/v4/deployments (Sepolia)
+    address constant SEP_V4_QUOTER = 0x68aFa8b853cAa7a2D40B0F6AEE5C4DbC147C8244;
+    address constant SEP_STATE_VIEW = 0xE1Dd9c3fA50EDB962E442f60DfBc432e24537E4C;
+    address constant SEP_RESERVES_LENS = 0x0000001b173C3bbF3984D417d8614E3eed34865B;
 
     // ---------------------------------------------------------------- Chainlink Automation (Base Sepolia, v2.3)
     address constant BASE_AUTOMATION_REGISTRAR = 0xf28D56F3A707E25B71Ce529a21AF388751E1CF2A;

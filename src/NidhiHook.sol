@@ -15,11 +15,20 @@ import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 import {Mandate, Attestation, MandateLib} from "./libraries/Mandate.sol";
 import {IGrantAuthority} from "./interfaces/IGrantAuthority.sol";
 import {IMsgSender} from "./interfaces/IMsgSender.sol";
 import {INidhiDispatcher} from "./interfaces/INidhiDispatcher.sol";
+
+/// @dev Uniswap v4 StateView (periphery lens): read-only access to any pool's slot0.
+interface IStateViewLike {
+    function getSlot0(bytes32 poolId)
+        external
+        view
+        returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee);
+}
 
 /// @title NidhiHook
 /// @notice Uniswap v4 hook that turns one pool into a mandate-gated grant payout rail.
@@ -54,6 +63,31 @@ contract NidhiHook is BaseHook, EIP712 {
     address public immutable owner;
     /// @notice Rolling safety cap: max total `amountIn` the hook will authorize per UTC day.
     uint256 public immutable maxAmountInPerDay;
+
+    /// @notice Reference-price guard (Uniswap StateView): the achieved rate must stay within `maxDeviationBps` of the
+    ///         canonical deep v4 pool for the same pair. Blunts thin-pool skew and sandwiching without a trusted oracle.
+    ///         stateView == address(0) disables the guard.
+    struct ReferenceGuard {
+        address stateView;
+        bytes32 poolId; // v4 pool id of the canonical reference pool
+        address baseToken; // the token sold into our pool (wrapped native)
+        address payoutToken; // the token paid out (USDC)
+        bool baseIsCurrency0; // orientation of `baseToken` inside the reference pool (native ETH counts as currency0)
+        uint16 maxDeviationBps;
+    }
+
+    IStateViewLike public immutable guardStateView;
+    bytes32 public immutable guardPoolId;
+    address public immutable guardBaseToken;
+    address public immutable guardPayoutToken;
+    bool public immutable guardBaseIsCurrency0;
+    uint16 public immutable guardMaxDeviationBps;
+
+    /// @notice Canonical Uniswap V4Quoter (address(0) disables quoting). Its swaps always revert inside its own
+    ///         unlock callback (BaseV4Quoter: `if (success) revert UnexpectedCallSuccess()`), so a quote can never
+    ///         move funds, consume a grant or touch the cap. The hook lets it simulate without a mandate so approver
+    ///         tooling can price a grant exactly with Uniswap's own quoter.
+    address public immutable quoter;
 
     /// @notice ENS guardian kill-switch state.
     bool public paused;
@@ -97,6 +131,9 @@ contract NidhiHook is BaseHook, EIP712 {
     error Paused();
     error CapExceeded(uint256 requested, uint256 remaining);
     error RecipientMismatch(address resolved, address mandated);
+    error InvalidGuard();
+    error GuardTokenMismatch(address tokenIn, address tokenOut);
+    error PriceDeviation(uint256 executionRate, uint256 referenceRate, uint16 maxDeviationBps);
 
     constructor(
         IPoolManager poolManager_,
@@ -104,7 +141,9 @@ contract NidhiHook is BaseHook, EIP712 {
         INidhiDispatcher dispatcher_,
         address trustedRouter_,
         address owner_,
-        uint256 maxAmountInPerDay_
+        uint256 maxAmountInPerDay_,
+        address quoter_,
+        ReferenceGuard memory guard_
     ) BaseHook(poolManager_) EIP712("Nidhi", "1") {
         if (
             address(authority_) == address(0) || address(dispatcher_) == address(0) || trustedRouter_ == address(0)
@@ -115,6 +154,19 @@ contract NidhiHook is BaseHook, EIP712 {
         trustedRouter = trustedRouter_;
         owner = owner_;
         maxAmountInPerDay = maxAmountInPerDay_;
+        quoter = quoter_;
+        if (
+            guard_.stateView != address(0)
+                && (guard_.baseToken == address(0) || guard_.payoutToken == address(0) || guard_.maxDeviationBps == 0)
+        ) {
+            revert InvalidGuard();
+        }
+        guardStateView = IStateViewLike(guard_.stateView);
+        guardPoolId = guard_.poolId;
+        guardBaseToken = guard_.baseToken;
+        guardPayoutToken = guard_.payoutToken;
+        guardBaseIsCurrency0 = guard_.baseIsCurrency0;
+        guardMaxDeviationBps = guard_.maxDeviationBps;
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -192,8 +244,12 @@ contract NidhiHook is BaseHook, EIP712 {
         override
         returns (bytes4, BeforeSwapDelta, uint24)
     {
-        if (paused) revert Paused();
         if (!poolSet || PoolId.unwrap(key.toId()) != PoolId.unwrap(poolId)) revert WrongPool();
+        // Quote-only path: the canonical V4Quoter always reverts its own swap, so nothing here can persist.
+        if (sender == quoter && sender != address(0)) {
+            return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
+        }
+        if (paused) revert Paused();
         if (sender != trustedRouter) revert UntrustedRouter(sender);
 
         GrantAuth memory g = abi.decode(hookData, (GrantAuth));
@@ -260,12 +316,27 @@ contract NidhiHook is BaseHook, EIP712 {
         }
     }
 
+    /// @dev Achieved rate (payout raw units per base raw unit, 1e18-scaled) vs the reference pool's spot, same units.
+    ///      The band must cover the pool fee plus expected impact; a manipulated or skewed pool falls outside it.
+    function _checkReferencePrice(Mandate memory m, uint256 out) private view {
+        if (address(guardStateView) == address(0)) return;
+        if (m.tokenIn != guardBaseToken || m.tokenOut != guardPayoutToken) {
+            revert GuardTokenMismatch(m.tokenIn, m.tokenOut);
+        }
+        (uint160 sqrtP,,,) = guardStateView.getSlot0(guardPoolId);
+        uint256 p96 = FullMath.mulDiv(sqrtP, sqrtP, 1 << 96); // token1/token0 price, 2^96-scaled
+        uint256 ref = guardBaseIsCurrency0 ? FullMath.mulDiv(p96, 1e18, 1 << 96) : FullMath.mulDiv(1e18, 1 << 96, p96);
+        uint256 exec = FullMath.mulDiv(out, 1e18, m.amountIn);
+        uint256 diff = exec > ref ? exec - ref : ref - exec;
+        if (diff * 10_000 > ref * guardMaxDeviationBps) revert PriceDeviation(exec, ref, guardMaxDeviationBps);
+    }
+
     /// @dev "Pay a name, not an address": the mandated recipient must be exactly what the grantee's ENS subname
     ///      resolves to on the payout chain right now. Re-pointing the subname redirects future grants; an expired
     ///      or unset subname blocks them.
     function _checkRecipient(GrantAuth memory g) private view {
         if (keccak256(bytes(g.recipientLabel)) != g.mandate.recipientLabelHash) revert InvalidMandate();
-        address resolved = authority.resolveGrantee(g.recipientLabel);
+        address resolved = authority.resolveGrantee(g.recipientLabel, g.mandate.destChainSelector);
         if (resolved == address(0) || resolved != g.mandate.recipient) {
             revert RecipientMismatch(resolved, g.mandate.recipient);
         }
@@ -284,12 +355,13 @@ contract NidhiHook is BaseHook, EIP712 {
     // ------------------------------------------------------------------ afterSwap: capture + atomic dispatch
 
     function _afterSwap(
-        address,
+        address sender,
         PoolKey calldata key,
         SwapParams calldata params,
         BalanceDelta delta,
         bytes calldata hookData
     ) internal override returns (bytes4, int128) {
+        if (sender == quoter && sender != address(0)) return (this.afterSwap.selector, 0); // quote: no capture
         Mandate memory m = abi.decode(hookData, (GrantAuth)).mandate;
         bytes32 active = _activeGrant();
         if (active == bytes32(0) || active != m.grantId) revert NoActiveGrant();
@@ -301,6 +373,7 @@ contract NidhiHook is BaseHook, EIP712 {
         if (out < m.minOut || out > m.maxOut) revert OutputOutOfBounds(out, m.minOut, m.maxOut);
 
         Currency outC = params.zeroForOne ? key.currency1 : key.currency0;
+        _checkReferencePrice(m, out);
 
         // Move the full output from the PoolManager straight into the dispatcher. The matching +out credit
         // to the hook is booked by the PoolManager from our returned delta, netting the hook to zero.

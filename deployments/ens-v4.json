@@ -1,0 +1,10 @@
+{
+  "authority": "0x92ceAa59dfB8Ce4A85dCECFd26e50Ba58e375600",
+  "name": "nidhi-dao.eth",
+  "subregistry": "0x562FB95c17272B850c99496e565bA5eCEDA6C656",
+  "sharedResolver": "0x0195E12dD817F97e7CF7226858F64B8a6BC9bd4A",
+  "bobResolver": "0x0faD784c4f25b3612Ad2f728632A8737aBBE4a29",
+  "carolExpiry": 1793939556,
+  "granteeWallet": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+  "grantees": "alice,bob,carol"
+}

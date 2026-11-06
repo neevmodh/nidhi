@@ -16,11 +16,21 @@ contract ENSv2AuthorityTest is Test {
     address op = address(0xA1);
     address ai = address(0xA2);
 
+    function _sels() internal pure returns (uint64[] memory a) {
+        a = new uint64[](1);
+        a[0] = 111;
+    }
+
+    function _coins() internal pure returns (uint256[] memory a) {
+        a = new uint256[](1);
+        a[0] = 0x80000000 | 84532;
+    }
+
     function setUp() public {
         eac = new MockEAC();
         registry = new MockENSv2Registry();
         registry.set("nidhi-dao", address(eac), uint64(block.timestamp + 365 days));
-        auth = new ENSv2Authority(IENSv2Registry(address(registry)), "nidhi-dao", 0x80000000 | 84532);
+        auth = new ENSv2Authority(IENSv2Registry(address(registry)), "nidhi-dao", _sels(), _coins());
     }
 
     function test_resourceMatchesPermissionedResolverLib() public view {
@@ -77,10 +87,23 @@ contract ENSv2AuthorityTest is Test {
         assertTrue(auth.isAuthorized(auth.APPROVER(), ai), "new resolver is authoritative");
     }
 
+    function test_constructorRejectsMismatchedOrZeroSelectors() public {
+        uint64[] memory two = new uint64[](2);
+        two[0] = 1;
+        two[1] = 2;
+        vm.expectRevert(ENSv2Authority.BadConfig.selector);
+        new ENSv2Authority(IENSv2Registry(address(registry)), "nidhi-dao", two, _coins());
+        uint64[] memory zero = new uint64[](1);
+        vm.expectRevert(ENSv2Authority.BadConfig.selector);
+        new ENSv2Authority(IENSv2Registry(address(registry)), "nidhi-dao", zero, _coins());
+        assertEq(auth.coinTypeOf(111), 0x80000000 | 84532);
+        assertEq(auth.coinTypeOf(222), 0, "unmapped chain");
+    }
+
     function test_constructorRejectsBadConfig() public {
         vm.expectRevert(ENSv2Authority.BadConfig.selector);
-        new ENSv2Authority(IENSv2Registry(address(0)), "nidhi-dao", 1);
+        new ENSv2Authority(IENSv2Registry(address(0)), "nidhi-dao", _sels(), _coins());
         vm.expectRevert(ENSv2Authority.BadConfig.selector);
-        new ENSv2Authority(IENSv2Registry(address(registry)), "", 1);
+        new ENSv2Authority(IENSv2Registry(address(registry)), "", _sels(), _coins());
     }
 }

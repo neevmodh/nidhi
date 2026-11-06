@@ -1,68 +1,62 @@
-# Nidhi: demo script (3–4 minutes)
+# Nidhi: demo script (about 4 minutes)
 
-Before recording, open these tabs:
-- **Dashboard:** https://neevmodh.github.io/nidhi/
-- **Terminal** in the repo, with `.env` filled in.
-- **MetaMask on Base Sepolia**, with the CCIP-BnM token imported (`0x88A2d74F47a237a62e7A51cdDa67270CE381555e`).
+**Before recording, open:**
+- **The app:** https://neevmodh.github.io/nidhi/ (or `cd ui && npm run dev`). Use the evening grade.
+- **MetaMask** with the admin wallet, and CCIP-BnM imported on Base Sepolia (`0x88A2d74F47a237a62e7A51cdDa67270CE381555e`).
 - **CCIP Explorer:** https://ccip.chain.link
+- **This repo on GitHub**, with `README.md` open at "Prize tracks".
+
+Every number on screen is read live from the chains. If an RPC is slow, wait a second; nothing is pre-recorded.
 
 ---
 
-### 0:00 – 0:25: The problem
-> "A DAO paying a grant today signs a swap, holds the tokens, then signs a bridge. Three disconnected steps, three chances
-> to send the wrong amount to the wrong place. We call it the blind send."
+### 0:00 – 0:25 · The problem (landing page)
+> "A DAO paying a grant today signs a swap, holds the tokens, then signs a bridge: three separate steps and three chances to
+> pay the wrong amount to the wrong place. Nidhi does all of it in one transaction, and only after two signatures."
 
-Show the one-line flow at the top of the dashboard.
+Point at the hero card: it is the newest real grant, live, with its five steps.
 
-### 0:25 – 0:55: Identity lives in ENS
-> "Nidhi's permissions are not in our contracts. They live in the DAO's ENSv2 name."
+### 0:25 – 1:10 · Uniswap v4: the hook is the gate (Overview, then a grant timeline)
+> "The grant is a swap through our Uniswap v4 hook. The hook checks two EIP-712 signatures, the daily cap and the price band,
+> then takes the output straight into the CCIP dispatcher, so the caller never holds it."
 
-On the dashboard, show the panel **Discovered from nidhi-dao.eth**. Every contract address comes from the name's text records. Then show **ENS identities**: `alice.nidhi-dao.eth` resolves to the grantee's Base wallet, and `auditor.nidhi-dao.eth` is the AI agent.
+- **Overview:** cap left today, fee reserve, routes and health, all read live from the hook and the dispatcher.
+- **Pool:** the pool price comes from Uniswap's StateView, and the DAO's liquidity is a PositionManager NFT.
+- **New grant:** type `alice`. The name check and the V4Quoter quote run as you type.
 
-### 0:55 – 1:35: The AI auditor
-```bash
-cd offchain && node src/audit.ts nidhi-003 && node src/verify.ts
-```
-> "The rubric decides: merged, approved, CI green, right files. A jury of models (Groq, Gemini, Cerebras) can only veto.
-> Amounts come from the DAO's grant table, never from an LLM. Anyone can re-verify."
+### 1:10 – 2:00 · Chainlink CCIP: paid on another chain, with a receipt (Grants → a settled grant)
+> "CCIP carries the exact amount and the grant data to the grantee's chain. The receiver pays, then sends a receipt back, and
+> the source ledger moves to Settled. Every step links to the real transaction."
 
-Then show the rejection:
-```bash
-node src/audit.ts nidhi-002
-```
-> "This PR was merged without review, so it is rejected and nothing is signed."
+Click **CCIP explorer** on the timeline to show the message. Then open the **multi-hop** grant (Base Sepolia → Unichain Sepolia):
+> "Base and Unichain share no CCIP lane. Our relay on Arbitrum forwards the grant and returns the receipt, so the DAO can pay a
+> chain without worrying whether a lane exists."
 
-### 1:35 – 2:25: One transaction pays the grant
-```bash
-cd .. && forge script script/05_Demo.s.sol --rpc-url sepolia --broadcast
-```
-> "In one Sepolia transaction the hook checks both signatures, both ENS roles, that the recipient is exactly what
-> alice.nidhi-dao.eth resolves to on Base, the daily cap, and the guardian switch. Then it swaps, captures the whole output,
-> and hands it to Chainlink CCIP. The executor receives nothing; funds never rest in a wallet."
+Show the relay step in its timeline.
 
-Open the printed CCIP Explorer link. When the message lands, show the CCIP-BnM balance in MetaMask on Base, then the dashboard row turning **SETTLED** once the ACK returns.
+### 2:00 – 3:10 · ENSv2: the DAO's name decides (ENS page)
+> "On Sepolia the authority is the DAO's ENSv2 name. A role is Enhanced Access Control permission to set one text record on
+> nidhi-dao.eth. Revoke it in ENS, and that signer is stopped on the next swap."
 
-### 2:25 – 3:20: Try to break it (live)
-```bash
-forge script script/07_LiveScenarios.s.sol --rpc-url sepolia --broadcast --sig "revoke()"   # ENS role revoked → NotAuthorized
-forge script script/07_LiveScenarios.s.sol --rpc-url sepolia --broadcast --sig "regrant()"
-forge script script/07_LiveScenarios.s.sol --rpc-url sepolia --broadcast --sig "pause()"    # guardian → Paused
-forge script script/07_LiveScenarios.s.sol --rpc-url sepolia --broadcast --sig "unpause()"
-forge script script/07_LiveScenarios.s.sol --rpc-url sepolia --sig "tamper()"               # recipient swapped → BadSignature
-```
-> "Revoke a role in ENS and the very next payout fails. The guardian stops everything in one transaction. Change one byte of a
-> signed mandate and it fails. And even if both keys leaked, the daily cap bounds the damage."
+- **Roles:** the approver and auditor hold their roles; paste any address to check it live.
+- **Grantees are subnames:** alice on the shared resolver, bob with **his own resolver** (only his wallet can change it), carol
+  with an **expiring** name as her grant period. After it expires she shows "grants refused".
+- **The AI auditor is an ENS agent:** `auditor.nidhi-dao.eth` holds its signed verdict, and that is the only record it may write.
+- Open the ENS-gated grant to `alice.nidhi-dao.eth` in **Grants**: "Decided by ENSv2".
 
-### 3:20 – 3:45: It heals itself
-> "If a payout can't complete on Base, the funds are held, never lost. Chainlink Automation retries stuck acknowledgements
-> and held payouts, and the DAO can recover to a safe address."
+### 3:10 – 3:40 · Safety (landing page, Security section)
+> "Two different signers, a daily cap, a guardian pause, routes that can only be added, a receiver that never reverts, and on
+> mainnet a price band against the deep Uniswap pool."
 
-Show the **Self-healing queue** on the dashboard and `checkUpkeep` / `performUpkeep` in [`DestinationReceiver.sol`](src/DestinationReceiver.sol).
+Optional: on **Network**, switch to **Mainnets, ready**: rehearsed on forks of each chain, not deployed.
 
-### 3:45 – 4:00: Close
-> "97 tests including live-fork tests against the real ENSv2 and Uniswap contracts, invariants, Slither triage, and every claim
-> backed by a transaction hash in the README. Nidhi: pay a name, under a mandate, in one transaction."
+### 3:40 – 4:00 · Close
+> "Nidhi: Uniswap v4 enforces the grant, Chainlink CCIP settles it across chains, ENSv2 says who is allowed. It's all open
+> source, with every claim linked to code and transactions in the README."
 
 ---
 
-**If something is slow live:** CCIP testnet delivery waits for Sepolia finality (15–25 minutes). Record the payout and the `SETTLED` state from the earlier grant `nidhi-003` (links in the README) instead of waiting on camera.
+## If something goes wrong live
+- **A screen shows "Could not reach…":** a public RPC is slow. Reload, or switch chains and back.
+- **A grant is "In flight":** testnet CCIP takes 10 to 25 minutes per leg. Show a settled grant instead.
+- **The wallet says "does not hold the approver role":** that is the role check working. Signing needs the role keys.

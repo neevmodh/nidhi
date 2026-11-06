@@ -1,0 +1,47 @@
+{
+  "id": "m1",
+  "spec": {
+    "title": "Document the milestone agent",
+    "repo": "neevmodh/nidhi",
+    "rfp": "rfp/m1.md",
+    "grantee": "alice",
+    "payTo": 84532,
+    "amountInWei": "300000000000000",
+    "requiredPathGlobs": [
+      "docs/**"
+    ],
+    "rules": {
+      "requireMerged": true,
+      "minApprovals": 0,
+      "requireNoFailedChecks": true,
+      "requiredPathGlobs": [
+        "docs/**"
+      ],
+      "maxFilesChanged": 60
+    },
+    "note": "Demo milestone: no approving review required, so one person can run the whole demo."
+  },
+  "specHash": "0x3bbf4eaddcbec4f8b0569d335933f04ea1b4ef232f49889751d1ea19ef665177",
+  "quoteAtCommit": "285326992199004892n",
+  "mandate": {
+    "grantId": "0xcfc477412949bcbb80125f53e5d5291b704d8f5707183b5f0d84cbf8bc9993c3",
+    "executor": "0x410b6334F7804Ed55e8a1E00D84f6A4a216dB36E",
+    "recipient": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+    "tokenIn": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    "tokenOut": "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05",
+    "amountIn": "300000000000000n",
+    "minOut": "142663496099502446n",
+    "maxOut": "427990488298507338n",
+    "destChainSelector": "10344971235874465080n",
+    "destReceiver": "0x9197993f0c9fc1B9920e9f1b81b4852334B2Cc83",
+    "evidenceHash": "0x3bbf4eaddcbec4f8b0569d335933f04ea1b4ef232f49889751d1ea19ef665177",
+    "deadline": "1796530159n",
+    "poolId": "0xca3618345392a1baca6b2d106b3ad9c7e98e8c31df872373893fe83abc6691bc",
+    "recipientLabelHash": "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501"
+  },
+  "approver": "0xcb83DbB16c6C5700B59c94184E1eFe21bAFb972D",
+  "approverSig": "0xaa44f5057dd9ed76ea96fb23750e7f1c77362008d48c97d70ee72ff4317bcf713e0494e65bd7211b98e0130a9967aa953b5956b665a676f68f9adf390831d42d1b",
+  "hook": "0x88257DA3a88Aaaf8b3EEF52112Bfb9C3596580c4",
+  "chainId": 11155111,
+  "committedAt": "2026-11-06T04:09:19.383Z"
+}

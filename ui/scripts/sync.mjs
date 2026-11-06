@@ -1,0 +1,177 @@
+// Copies the real deployment into the app before every dev/build run:
+//   chains/*.json, deployments/<chainId>.json, ABIs from Foundry's out/, the Phosphor sprite and protocol logos.
+// Nothing here is invented: if a file is missing the app shows an empty state for it.
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repo = path.resolve(ui, "..");
+const data = path.join(ui, "src", "data");
+fs.mkdirSync(data, { recursive: true });
+
+const readJson = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
+const write = (name, v) => fs.writeFileSync(path.join(data, name), typeof v === "string" ? v : JSON.stringify(v, null, 2) + "\n");
+
+// ---- chains and deployments
+write("testnets.json", readJson(path.join(repo, "chains", "testnets.json")));
+const reg = readJson(path.join(repo, "chains", "registry.json"));
+// mainnet registry is large; the app needs only the summary
+write("mainnets.json", {
+  sourceChains: reg.sourceChains,
+  chains: Object.fromEntries(Object.values(reg.chains).map((c) => [c.chainId, {
+    chainId: c.chainId, key: c.key, name: c.name, native: c.native,
+    source: Boolean(c.capabilities?.source), cursed: Boolean(c.ccip?.cursedAtGeneration),
+    payoutLanes: c.payoutLanes ?? [], excludedBecause: c.excludedBecause ?? null, tradingApi: Boolean(c.tradingApi),
+  }])),
+});
+const deployments = {};
+for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
+  if (!/^\d+\.json$/.test(f)) continue;
+  const id = f.replace(".json", "");
+  const d = readJson(path.join(repo, "deployments", f));
+  // Arbitrum's block.number is the L1 block, so take the real chain block from Forge's broadcast receipts.
+  const bc = path.join(repo, "broadcast", "Deploy.s.sol", id, "run-latest.json");
+  // a recorded fromBlock wins: broadcast/ holds only the LATEST Deploy run on that chain (it may be another stack)
+  if (d.fromBlock === undefined && fs.existsSync(bc)) {
+    const r = readJson(bc).receipts ?? [];
+    const blocks = r.map((x) => Number(BigInt(x.blockNumber))).filter((n) => n > 0);
+    if (blocks.length) d.fromBlock = Math.min(...blocks);
+  }
+  d.fromBlock ??= d.deployBlock;
+  // persist it beside the deployment, so CI (which has no broadcast/) gets the same start block
+  const depPath = path.join(repo, "deployments", f);
+  const onDisk = readJson(depPath);
+  if (onDisk.fromBlock !== d.fromBlock) fs.writeFileSync(depPath, JSON.stringify({ ...onDisk, fromBlock: d.fromBlock }, null, 2) + "\n");
+  deployments[id] = d;
+}
+// ---- ENSv2-gated source stack on Sepolia (deployments/ens-v4*.json), attached to the Sepolia deployment
+{
+  const stackPath = path.join(repo, "deployments", "ens-v4-stack.json");
+  const idPath = path.join(repo, "deployments", "ens-v4.json");
+  if (fs.existsSync(stackPath) && fs.existsSync(idPath) && deployments["11155111"]) {
+    const stack = readJson(stackPath);
+    if (stack.fromBlock === undefined) {
+      const bc = path.join(repo, "broadcast", "Deploy.s.sol", "11155111", "run-latest.json");
+      const r = fs.existsSync(bc) ? readJson(bc).receipts ?? [] : [];
+      const b = r.map((x) => Number(BigInt(x.blockNumber))).filter((n) => n > 0);
+      if (b.length) { stack.fromBlock = Math.min(...b); fs.writeFileSync(stackPath, JSON.stringify(stack, null, 2) + "\n"); }
+    }
+    const receivers = {};
+    for (const id of ["84532", "421614"]) {
+      const f = path.join(repo, "deployments", `ens-v4-receiver-${id}.json`);
+      if (fs.existsSync(f)) receivers[id] = readJson(f).receiver;
+    }
+    const v3 = readJson(path.join(repo, "deployments", "sepolia-ens.json"));
+    const subs = readJson(path.join(repo, "deployments", "sepolia-subnames.json"));
+    deployments["11155111"].ens = {
+      stack: { ...stack, receivers },
+      identity: { ...readJson(idPath), daoResolver: v3.resolver, approver: v3.approver, auditor: v3.auditor, auditorName: subs.auditor },
+    };
+  }
+}
+// ---- multi-hop source stack (deployments/hop-v4-*.json), attached to its source chain
+{
+  const stackPath = path.join(repo, "deployments", "hop-v4-stack.json");
+  const routePath = path.join(repo, "deployments", "hop-v4-route.json");
+  if (fs.existsSync(stackPath) && fs.existsSync(routePath)) {
+    const route = readJson(routePath);
+    const stack = readJson(stackPath);
+    if (stack.fromBlock === undefined) {
+      const bc = path.join(repo, "broadcast", "Deploy.s.sol", String(route.source), "run-latest.json");
+      const r = fs.existsSync(bc) ? readJson(bc).receipts ?? [] : [];
+      const b = r.map((x) => Number(BigInt(x.blockNumber))).filter((n) => n > 0);
+      if (b.length) { stack.fromBlock = Math.min(...b); fs.writeFileSync(stackPath, JSON.stringify(stack, null, 2) + "\n"); }
+    }
+    if (deployments[String(route.source)]) deployments[String(route.source)].hop = { stack, route };
+  }
+}
+// ---- milestone grants: the DAO's milestone specs and the mandates its approver pre-signed (public by design)
+{
+  const mf = path.join(repo, "offchain", "milestones.json");
+  const out = { source: null, milestones: {} };
+  if (fs.existsSync(mf)) {
+    const file = readJson(mf);
+    out.source = file.source;
+    for (const [id, m] of Object.entries(file.milestones)) {
+      const md = path.join(repo, "offchain", "mandates", `${id}.json`);
+      const rfp = path.join(repo, "offchain", m.rfp);
+      const mandate = fs.existsSync(md) ? readJson(md) : null;
+      out.milestones[id] = {
+        ...m,
+        rfpText: fs.existsSync(rfp) ? fs.readFileSync(rfp, "utf8") : "",
+        committed: Boolean(mandate),
+        specHash: mandate?.specHash ?? null,
+        grantId: mandate?.mandate?.grantId ?? null,
+        approver: mandate?.approver ?? null,
+        committedAt: mandate?.committedAt ?? null,
+        deadline: mandate ? Number(String(mandate.mandate.deadline).replace(/n$/, "")) : null,
+        rules: mandate?.spec?.rules ?? m.rules,
+      };
+    }
+  }
+  write("milestones.json", out);
+}
+write("deployments.json", deployments);
+
+// ---- audit evidence (latest run), if present
+const bundle = path.join(repo, "offchain", "out", "evidence-bundle.json");
+write("evidence.json", fs.existsSync(bundle) ? readJson(bundle) : null);
+
+// ---- ABIs from the Foundry build
+const contracts = ["NidhiHook", "NidhiDispatcher", "DestinationReceiver", "RoleAuthority", "NidhiSwapRouter"];
+if (fs.existsSync(path.join(repo, "out", "NidhiHook.sol"))) {
+  let abiTs = "// generated by scripts/sync.mjs from Foundry's out/ - do not edit\n";
+  for (const c of contracts) {
+    const art = readJson(path.join(repo, "out", `${c}.sol`, `${c}.json`));
+    abiTs += `export const ${c[0].toLowerCase() + c.slice(1)}Abi = ${JSON.stringify(art.abi)} as const;\n`;
+  }
+  write("abi.ts", abiTs);
+} else if (!fs.existsSync(path.join(data, "abi.ts"))) {
+  throw new Error("No Foundry out/ and no committed src/data/abi.ts: run forge build first");
+} // else: keep the committed ABIs (CI without a Foundry build)
+
+// ---- interface icons: one Phosphor sprite (regular weight)
+const ICONS = [
+  "arrow-right", "arrow-up-right", "arrow-left", "caret-down", "caret-right", "check", "x", "copy", "wallet",
+  "plus", "magnifying-glass", "circle", "circle-half", "warning", "pause", "play", "arrows-left-right",
+  "shield-check", "signature", "scales", "coins", "vault", "gear-six", "list", "moon", "sun", "lightning",
+  "git-pull-request", "clock", "link-simple", "users-three", "drop", "graph", "arrow-clockwise", "lock-simple",
+];
+const ph = path.join(ui, "node_modules", "@phosphor-icons", "core");
+let sprite = '<svg xmlns="http://www.w3.org/2000/svg" style="display:none">';
+for (const n of ICONS) {
+  const svg = fs.readFileSync(path.join(ph, "assets", "regular", `${n}.svg`), "utf8");
+  const vb = svg.match(/viewBox="([^"]+)"/)[1];
+  const inner = svg.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+  sprite += `<symbol id="${n}" viewBox="${vb}" fill="currentColor">${inner}</symbol>`;
+}
+fs.writeFileSync(path.join(ui, "public", "icons.svg"), sprite + "</svg>\n");
+
+// ---- protocol and chain marks: official brand SVGs in their own colours (web3icons)
+const w3 = require("@web3icons/core");
+const LOGOS = {
+  uniswap: "ExchangeBrandedUniswap", chainlink: "TokenBrandedLINK", ens: "TokenBrandedENS",
+  ethereum: "NetworkBrandedEthereum", base: "NetworkBrandedBase", arbitrum: "NetworkBrandedArbitrumOne",
+  unichain: "NetworkBrandedUnichain", polygon: "NetworkBrandedPolygon", avalanche: "NetworkBrandedAvalanche",
+  optimism: "NetworkBrandedOptimism", monad: "NetworkBrandedMonad", ink: "NetworkBrandedInk",
+};
+const logos = {};
+for (const [k, exp] of Object.entries(LOGOS)) {
+  const v = w3[exp];
+  if (v) logos[k] = (v.default ?? v).replace(/\s+/g, " ").trim();
+}
+write("logos.ts", `// generated by scripts/sync.mjs (@web3icons/core) - trademarks of their owners\nexport const logos: Record<string, string> = ${JSON.stringify(logos, null, 1)};\n`);
+
+console.log(`[sync] ${Object.keys(deployments).length} deployments, ${contracts.length} ABIs, ${ICONS.length} icons, ${Object.keys(logos).length} logos`);
+
+// ---- the logo as inline SVG strings: ink follows currentColor, both flames take the accent token
+{
+  const flame = /(<path[^>]*d="M12\.6 1\.6C[^"]*"[^>]*?)fill="currentColor"/g;
+  const tint = (s) => s.replace(flame, '$1fill="var(--accent)"').replace(/<title>[^<]*<\/title>/, "").replace(/\s+/g, " ").trim();
+  const mono = fs.readFileSync(path.join(ui, "public", "brand", "nidhi-mono.svg"), "utf8");
+  const mark = fs.readFileSync(path.join(ui, "public", "brand", "nidhi-mark.svg"), "utf8").replace(/fill="#C9A45A"/, 'fill="var(--accent)"');
+  write("brand.ts", `// generated by scripts/sync.mjs from public/brand\nexport const logoSvg = ${JSON.stringify(tint(mono))};\nexport const markSvg = ${JSON.stringify(tint(mark))};\n`);
+}

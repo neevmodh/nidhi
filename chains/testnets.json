@@ -1,0 +1,290 @@
+{
+  "generatedAt": "2026-11-05T19:29:34.903Z",
+  "testnet": true,
+  "sourceChains": [
+    11155111,
+    84532,
+    421614,
+    1301
+  ],
+  "sources": [
+    "developers.uniswap.org/deployments",
+    "docs.chain.link/api/ccip/v1",
+    "on-chain reads"
+  ],
+  "chains": {
+    "1301": {
+      "chainId": 1301,
+      "key": "unichain-sepolia",
+      "name": "Unichain Sepolia",
+      "testnet": true,
+      "uniswap": {
+        "poolManager": "0x9cB26A7183B2F4515945Dc52CB4195B0d2D06C95",
+        "positionManager": "0x12A98709BB5D0641D61458f85dcAFbE17AC2d05c",
+        "quoter": "0xB2b34025a07af3925313b6B46f8046Ee8FfBa30B",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      "tradingApi": true,
+      "ccip": {
+        "selector": "14135854469784514356",
+        "router": "0x5b7D7CDf03871dc9Eb00830B027e70A75bd3DC95",
+        "rmn": "0x6dFD89Ff6bDa2EA420Dfe6Cc57E7e1F9cf610925",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "11155111",
+        "421614"
+      ],
+      "tokens": {
+        "bnm": {
+          "address": "0xfE71882442C3Ab1C0651f2675a5c77285D415405",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://sepolia.unichain.org",
+      "explorer": "https://unichain-sepolia.blockscout.com",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "ccipRouter": true,
+        "bnm": true
+      },
+      "payoutToken": {
+        "symbol": "CCIP-BnM",
+        "address": "0xfE71882442C3Ab1C0651f2675a5c77285D415405",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "testPool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "initTickBaseIsCurrency0": 69060
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        11155111,
+        421614
+      ]
+    },
+    "84532": {
+      "chainId": 84532,
+      "key": "base-sepolia",
+      "name": "Base Sepolia",
+      "testnet": true,
+      "uniswap": {
+        "poolManager": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+        "positionManager": "0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80",
+        "quoter": "0x4A6513c898fe1B2d0E78d3b0e0A4a151589B1cBa",
+        "stateView": "0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      "tradingApi": true,
+      "ccip": {
+        "selector": "10344971235874465080",
+        "router": "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93",
+        "rmn": "0x99360767a4705f68CcCb9533195B761648d6d807",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "11155111",
+        "421614"
+      ],
+      "tokens": {
+        "bnm": {
+          "address": "0x88A2d74F47a237a62e7A51cdDa67270CE381555e",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://sepolia.base.org",
+      "explorer": "https://sepolia.basescan.org",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "ccipRouter": true,
+        "bnm": true
+      },
+      "payoutToken": {
+        "symbol": "CCIP-BnM",
+        "address": "0x88A2d74F47a237a62e7A51cdDa67270CE381555e",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "testPool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "initTickBaseIsCurrency0": 69060
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        11155111,
+        421614
+      ]
+    },
+    "421614": {
+      "chainId": 421614,
+      "key": "arbitrum-sepolia",
+      "name": "Arbitrum Sepolia",
+      "testnet": true,
+      "uniswap": {
+        "poolManager": "0xFB3e0C6F74eB1a21CC1Da29aeC80D2Dfe6C9a317",
+        "positionManager": "0xAc631556d3d4019C95769033B5E719dD77124BAc",
+        "quoter": "0x7dE51022d70A725b508085468052E25e22b5c4c9",
+        "stateView": "0x9D467FA9062b6e9B1a46E26007aD82db116c67cB",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      "tradingApi": false,
+      "ccip": {
+        "selector": "3478487238524512106",
+        "router": "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165",
+        "rmn": "0x9527E2d01A3064ef6b50c1Da1C0cC523803BCFF2",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "11155111",
+        "1301",
+        "84532"
+      ],
+      "tokens": {
+        "bnm": {
+          "address": "0xA8C0c11bf64AF62CDCA6f93D3769B88BdD7cb93D",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://sepolia-rollup.arbitrum.io/rpc",
+      "explorer": "https://sepolia.arbiscan.io",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "ccipRouter": true,
+        "bnm": true
+      },
+      "payoutToken": {
+        "symbol": "CCIP-BnM",
+        "address": "0xA8C0c11bf64AF62CDCA6f93D3769B88BdD7cb93D",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x980B62Da83eFf3D4576C647993b0c1D7faf17c73",
+        "symbol": "WETH"
+      },
+      "testPool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "initTickBaseIsCurrency0": 69060
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        11155111,
+        1301,
+        84532
+      ]
+    },
+    "11155111": {
+      "chainId": 11155111,
+      "key": "sepolia",
+      "name": "Ethereum Sepolia",
+      "testnet": true,
+      "uniswap": {
+        "poolManager": "0xE03A1074c86CFeDd5C142C4F04F1a1536e203543",
+        "positionManager": "0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4",
+        "quoter": "0x68aFa8b853cAa7a2D40B0F6AEE5C4DbC147C8244",
+        "stateView": "0xE1Dd9c3fA50EDB962E442f60DfBc432e24537E4C",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3"
+      },
+      "tradingApi": true,
+      "ccip": {
+        "selector": "16015286601757825753",
+        "router": "0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59",
+        "rmn": "0xba3f6251de62dED61Ff98590cB2fDf6871FbB991",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1301",
+        "421614",
+        "84532"
+      ],
+      "tokens": {
+        "bnm": {
+          "address": "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://ethereum-sepolia-rpc.publicnode.com",
+      "explorer": "https://sepolia.etherscan.io",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "ccipRouter": true,
+        "bnm": true
+      },
+      "payoutToken": {
+        "symbol": "CCIP-BnM",
+        "address": "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+        "symbol": "WETH"
+      },
+      "testPool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "initTickBaseIsCurrency0": 69060
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1301,
+        421614,
+        84532
+      ]
+    }
+  }
+}

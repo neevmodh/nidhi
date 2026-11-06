@@ -11,7 +11,8 @@ async function pickModel(key: string): Promise<string> {
   const usable = models
     .filter((m) => (m.supportedGenerationMethods ?? []).includes("generateContent"))
     .map((m) => String(m.name).replace(/^models\//, ""));
-  for (const re of [/^gemini-[\d.]+-pro$/, /^gemini-[\d.]+-flash$/, /pro/, /flash/]) {
+  // the listing includes models that return 404 for new keys (e.g. 2.5-pro), so prefer the generally available flash tier
+  for (const re of [/^gemini-[\d.]+-flash$/, /^gemini-[\d.]+-pro$/, /flash/, /pro/]) {
     const hit = usable.filter((id) => re.test(id)).sort().reverse()[0];
     if (hit) return hit;
   }

@@ -1,0 +1,1732 @@
+{
+  "generatedAt": "2026-11-05T18:16:39.081Z",
+  "sourceChains": [
+    1,
+    10,
+    130,
+    137,
+    143,
+    999,
+    8453,
+    42161,
+    43114,
+    57073
+  ],
+  "sources": [
+    "developers.uniswap.org/deployments",
+    "developers.uniswap.org/docs/trading/swapping-api/supported-chains",
+    "docs.chain.link/api/ccip/v1",
+    "on-chain reads"
+  ],
+  "chains": {
+    "1": {
+      "chainId": 1,
+      "key": "ethereum",
+      "name": "Ethereum",
+      "uniswap": {
+        "poolManager": "0x000000000004444c5dc75cB358380D2e3dE08A90",
+        "positionManager": "0xbD216513d74C8cf14cf4747E6AaA6420FF64ee9e",
+        "quoter": "0x99bd42B2B22e531f283b7F8a86dFf631EB16A9D1",
+        "stateView": "0x7fFE42C4a5DEeA5b0feC41C94C136Cf115597227",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xbc708B192552e19A088b4C4B8772aEeA83bCf760",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x23617e59A5925b2A4Bf75d73ff6711cD0b29De85"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "5009297550715157269",
+        "router": "0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x411dE17f12D1A34ecC7F45f49844626267c75e81",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "10",
+        "56",
+        "130",
+        "137",
+        "143",
+        "196",
+        "480",
+        "999",
+        "1868",
+        "4217",
+        "4326",
+        "4663",
+        "5042",
+        "8453",
+        "42161",
+        "42220",
+        "43114",
+        "57073",
+        "59144",
+        "7777777"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": {
+          "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "symbol": "WETH"
+      },
+      "referencePool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "liquidity": "609734457568970504",
+        "poolId": "0xdce6394339af00981949f5f3baf27e3610c76326a700af57e4b3e3ae4977f78d",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        10,
+        130,
+        137,
+        143,
+        8453,
+        42161,
+        43114
+      ]
+    },
+    "10": {
+      "chainId": 10,
+      "key": "optimism",
+      "name": "Optimism",
+      "uniswap": {
+        "poolManager": "0x9a13F98Cb987694C9F086b1F5eB990EeA8264Ec3",
+        "positionManager": "0x3C3Ea4B57a46241e54610e5f022E5c45859A1017",
+        "quoter": "0xd673F731EDFe5AaF1bDa7FD43D13Bbb5150B87Ca",
+        "stateView": "0xc18a3169788F4F75A170290584ECA6395C75Ecdb",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x95aDC98A949dCD94645A8cD56830D86e4Cf34Eff",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xC09255D86DB563cBc11C2fCf4a0C512e160111B4"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "3734403246176062136",
+        "router": "0x3206695CaE29952f4b0c22a169725a865bc8Ce0f",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x55b3FCa23EdDd28b1f5B4a3C7975f63EFd2d06CE",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "130",
+        "137",
+        "143",
+        "8453",
+        "42161",
+        "42220",
+        "43114",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": null
+      },
+      "rpc": "https://mainnet.optimism.io",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "liquidity": "3718329802206890",
+        "poolId": "0xdb67e87b43804197a3a62c6d5066587d649782ce2dcada9586d6a35d57f02f2e",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        130,
+        137,
+        8453,
+        42161,
+        43114
+      ]
+    },
+    "56": {
+      "chainId": 56,
+      "key": "bnb",
+      "name": "BNB Chain",
+      "uniswap": {
+        "poolManager": "0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF",
+        "positionManager": "0x7A4a5c919aE2541AeD11041A1AEeE68f1287f95b",
+        "quoter": "0x95C086d7fE28AdD842ee220fef225a777474d781",
+        "stateView": "0xd13Dd3D6E93f276FAfc9Db9E6BB47C1180aeE0c4",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xCF6220e4496B091a6b391D48e770f1FbaC63E740",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xDc264714F68d84CF29BC605589405E78bDBE7C9f"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "11344663589394136015",
+        "router": "0x34B03Cb9086d7D758AC55af71584F81A598759FE",
+        "feeTokens": [
+          "LINK",
+          "WBNB",
+          "BNB"
+        ],
+        "rmn": "0x9e09697842194f77d315E0907F1Bda77922e8f84",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "130",
+        "137",
+        "143",
+        "196",
+        "999",
+        "1868",
+        "4217",
+        "4326",
+        "4663",
+        "8453",
+        "42161",
+        "43114",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": null
+      },
+      "rpc": "https://bsc-dataseed1.bnbchain.org",
+      "native": "BNB",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": null,
+      "wrappedNative": {
+        "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        "symbol": "WBNB"
+      },
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "130": {
+      "chainId": 130,
+      "key": "unichain",
+      "name": "Unichain",
+      "uniswap": {
+        "poolManager": "0x1F98400000000000000000000000000000000004",
+        "positionManager": "0x4529A01c7A0410167c5740C487A8DE60232617bf",
+        "quoter": "0xF885781cB68A0BE66AA2AC7eDa5Fe72Bde7dA907",
+        "stateView": "0x86e8631A016F9068C3f085fAF484Ee3F5fDee8f2",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x55E74a5c3310bBCCdd0B655Ade2309e0d0d25826",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xD1b797D92d87B688193A2B976eFc8D577D204343"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "1923510103922296319",
+        "router": "0x68891f5F96695ECd7dEdBE2289D1b73426ae7864",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x2c8De9677b07Cc256228069109D9842f0cB96291",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "137",
+        "8453",
+        "42161",
+        "42220",
+        "43114"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0x078D782b760474a361dDA0AF3839290b0EF57AD6",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": {
+          "address": "0xEF66491eab4bbB582c57b14778afd8dFb70D8A1A",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://mainnet.unichain.org",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0x078D782b760474a361dDA0AF3839290b0EF57AD6",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": {
+        "fee": 500,
+        "tickSpacing": 10,
+        "liquidity": "44228271641250116",
+        "poolId": "0x3258f413c7a88cda2fa8709a589d221a80f6574f63df5a5b6774485d8acc39d9",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        10,
+        137,
+        8453,
+        42161,
+        43114
+      ]
+    },
+    "137": {
+      "chainId": 137,
+      "key": "polygon",
+      "name": "Polygon",
+      "uniswap": {
+        "poolManager": "0x67366782805870060151383F4BbFF9daB53e5cD6",
+        "positionManager": "0x1Ec2eBf4F37E7363FDfe3551602425af0B3ceef9",
+        "quoter": "0x31AB0Dea31FC0ad5A54F03cD59C896eCD067447B",
+        "stateView": "0x5eA1bD7974c8A611cBAB0bDCAFcB1D9CC9b3BA5a",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xC988e19819a63C0e487c6Ad8d6668Ac773923BF2",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xDc264714F68d84CF29BC605589405E78bDBE7C9f"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "4051577828743386545",
+        "router": "0x849c5ED5a80F5B408Dd4969b78c2C8fdf0565Bfe",
+        "feeTokens": [
+          "LINK",
+          "WPOL",
+          "POL"
+        ],
+        "rmn": "0xf1ceAa46D8d13Cac9fC38aaEF3d3d14754C5A9c2",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "130",
+        "1868",
+        "4217",
+        "4663",
+        "5042",
+        "8453",
+        "42161",
+        "42220",
+        "43114",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": null
+      },
+      "rpc": "https://polygon-bor-rpc.publicnode.com",
+      "native": "POL",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+        "symbol": "WPOL"
+      },
+      "referencePool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "liquidity": "123320356335757918",
+        "poolId": "0x81d3c57932bb451b60029c9e60832e00a220af4a14c15f829b9090b3fd5717f2",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        8453,
+        42161,
+        43114
+      ]
+    },
+    "143": {
+      "chainId": 143,
+      "key": "monad",
+      "name": "Monad",
+      "uniswap": {
+        "poolManager": "0x188d586Ddcf52439676Ca21A244753fA19F9Ea8e",
+        "positionManager": "0x5b7eC4a94fF9beDb700fb82aB09d5846972F4016",
+        "quoter": "0xa222Dd357A9076d1091Ed6Aa2e16C9742dD26891",
+        "stateView": "0x77395F3b2E73aE90843717371294fa97cC419D64",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x5C834B6CAC4173bfE288c5722A38e04B9E366e30",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xa6CE4F10d83dBdDAc17E68e1837ca9cE6a1b596e"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "8481857512324358265",
+        "router": "0x33566fE5976AAa420F3d5C64996641Fc3858CaDB",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WMON",
+          "MON"
+        ],
+        "rmn": "0x99dFCa5d88f4D9C023531F4403966b8d61562AcD",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "196",
+        "999",
+        "4326",
+        "4663",
+        "8453",
+        "42161",
+        "43114",
+        "57073"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": {
+          "address": "0x76f257B1DDA5cC71bee4eF637Fbdde4C801310A9",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.monad.xyz",
+      "native": "MON",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A",
+        "symbol": "WMON"
+      },
+      "referencePool": {
+        "fee": 500,
+        "tickSpacing": 10,
+        "liquidity": "4653884962732542026",
+        "poolId": "0x18a9fc874581f3ba12b7898f80a683c66fd5877fd74b26a85ba9a3a79c549954",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        42161
+      ]
+    },
+    "196": {
+      "chainId": 196,
+      "key": "xlayer",
+      "name": "X Layer",
+      "uniswap": {
+        "poolManager": "0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32",
+        "positionManager": "0xcF1EAFC6928dC385A342E7C6491d371d2871458b",
+        "quoter": "0x8928074CA1b241D8Ec02815881c1Af11E8bC5219",
+        "stateView": "0x76Fd297e2D437cd7f76d50F01AfE6160f86e9990",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xfE31F71C1b106EAc32F1A19239c9a9A72ddfb900",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x1cd182C94fcF42277B80DBB9060F88024809E61E"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "3016212468291539606",
+        "router": "0xF2b6Cb7867EB5502C3249dD37D7bc1Cc148e5232",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WOKB",
+          "OKB"
+        ],
+        "rmn": "0x326B01f673681dAd72cd386CCe12FFF717be32cD",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "143",
+        "8453",
+        "42161",
+        "43114",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x8aF9711B44695a5A081F25AB9903DDB73aCf8FA9",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.xlayer.tech",
+      "native": "OKB",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x8aF9711B44695a5A081F25AB9903DDB73aCf8FA9",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0xe538905cf8410324e03A5A23C1c177a474D59b2b",
+        "symbol": "WOKB"
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "480": {
+      "chainId": 480,
+      "key": "worldchain",
+      "name": "World Chain",
+      "uniswap": {
+        "poolManager": "0xb1860D529182ac3BC1F51Fa2ABd56662b7D13f33",
+        "positionManager": "0xC585E0f504613b5fBf874F21Af14c65260fB41fA",
+        "quoter": "0xAD02601f1bE313C952AD198c0Cbc3F87f9eE8E63",
+        "stateView": "0x51D394718bc09297262e368c1A481217FdEB71eb",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": null,
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xF025e0Fe9E331A0eF05c2ad3C4E9C64b625cda6f"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "2049429975587534727",
+        "router": "0x5fd9E4986187c56826A3064954Cfa2Cf250cfA0f",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x7DE7Ef73cF001ff15b3aA558855D7eeC439d43ab",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "42220"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x915b648e994d5f31059B38223b9fbe98ae185473",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://worldchain-mainnet.g.alchemy.com/public",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x915b648e994d5f31059B38223b9fbe98ae185473",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "999": {
+      "chainId": 999,
+      "key": "hyperevm",
+      "name": "HyperEVM",
+      "uniswap": {
+        "poolManager": "0x12D4Fd9C5DeDd00ab8a0bCe2CF0167bbf94b6B1F",
+        "positionManager": "0x0d7Ab5B3db668128Aff6F70C4eBC71D7d4DA9bf9",
+        "quoter": "0x108Bfe38532C98f8Cd8D7Ab49c9dDAa3675a1c5e",
+        "stateView": "0x1656326235cb9E34Cb58CaDe53AE30789AB32A1A",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xf9744854e71ab8Cd238BC46002eEF5cE6f00c6c2",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": null
+      },
+      "tradingApi": false,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "2442541497099098535",
+        "router": "0x13b3332b66389B1467CA6eBd6fa79775CCeF65ec",
+        "feeTokens": [
+          "LINK",
+          "WHYPE",
+          "HYPE"
+        ],
+        "rmn": "0x07f15e9813FBd007d38CF534133C0838f449ecFA",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "143",
+        "4663",
+        "8453",
+        "42161"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0xb88339CB7199b77E23DB6E890353E22632Ba630f",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": {
+          "address": "0x1AC2EE68b8d038C982C1E1f73F596927dd70De59",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.hyperliquid.xyz/evm",
+      "native": "HYPE",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0xb88339CB7199b77E23DB6E890353E22632Ba630f",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x5555555555555555555555555555555555555555",
+        "symbol": "WHYPE"
+      },
+      "referencePool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "liquidity": "2834580495500",
+        "poolId": "0xfabd931e0110726cc904a41cfcb6d983742a92a5c5dc0f3c3b58a34144dbb10e",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        42161
+      ]
+    },
+    "1868": {
+      "chainId": 1868,
+      "key": "soneium",
+      "name": "Soneium",
+      "uniswap": {
+        "poolManager": "0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32",
+        "positionManager": "0x1b35d13a2E2528f192637F14B05f0Dc0e7dEB566",
+        "quoter": "0x8928074CA1b241D8Ec02815881c1Af11E8bC5219",
+        "stateView": "0x76Fd297e2D437cd7f76d50F01AfE6160f86e9990",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x7A5299822b2cD9aC9A9f67756Aa2d62140e9A66f",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x661E93cca42AfacB172121EF892830cA3b70F08d"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "12505351618335765396",
+        "router": "0x8C8B88d827Fe14Df2bc6392947d513C86afD6977",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x3117f515D763652A32d3D6D447171ea7c9d57218",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "137",
+        "8453",
+        "42161",
+        "42220",
+        "57073"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x32D8F819C8080ae44375F8d383Ffd39FC642f3Ec",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.soneium.org",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x32D8F819C8080ae44375F8d383Ffd39FC642f3Ec",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "4217": {
+      "chainId": 4217,
+      "key": "tempo",
+      "name": "Tempo",
+      "uniswap": {
+        "poolManager": "0x33620f62C5b9B2086dD6b62F4A297A9f30347029",
+        "positionManager": "0x3Fc79444F8EACc1894775493Ff3Fa41f1e35Ce11",
+        "quoter": "0x20E6487C371a2086F841eF453F85378223DF4f4E",
+        "stateView": "0x21B954fBa3F5ddEbe77Ef2D47A3100c066908B2A",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xB8Fe241cF33f25ADFF548edE4EffFbf90216D492",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x182a927119D56008d921126764bF884221b10f59"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "7281642695469137430",
+        "router": "0xa132F089492CcE5f1D79483a9e4552f37266ed01",
+        "feeTokens": [
+          "LINK",
+          "pathUSD",
+          "WTEMP",
+          "USD"
+        ],
+        "rmn": "0x65615642056b48BCB8120C109f7e7c0c3623A8BF",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "137",
+        "5042",
+        "8453",
+        "42161",
+        "43114",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x15C03488B29e27d62BAf10E30b0c474bf60E0264",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.mainnet.tempo.xyz",
+      "native": "USD",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x15C03488B29e27d62BAf10E30b0c474bf60E0264",
+        "decimals": 18
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "4326": {
+      "chainId": 4326,
+      "key": "megaeth",
+      "name": "MegaETH",
+      "uniswap": {
+        "poolManager": "0xaCB7e78fa05D562e0A5D3089ec896D57D057d38E",
+        "positionManager": "0x9AE0921E981AAa7308f176F8d4F9129b9247C89D",
+        "quoter": "0x94bDC671f0c35F44a1DaA53143fd1f868D1623b9",
+        "stateView": "0x726f84e1DFb8d375a365e0808282f40D52D3E4e8",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x2103a00792b980dff0509952BeAD5Cb2e3149022",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xAedd1CF4C14e833140A61E9C0d2b73a64795c823"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "6093540873831549674",
+        "router": "0xfa546248C54939AA6C48279CdC1EAf9A1125c411",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0xA27056438FfA1f286AB197488808692F0db93F8B",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "143",
+        "8453",
+        "43114"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0xee85aEfb15b9489563A6a29891ebe0750AA1A7Ae",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://mainnet.megaeth.com/rpc",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0xee85aEfb15b9489563A6a29891ebe0750AA1A7Ae",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "4663": {
+      "chainId": 4663,
+      "key": "robinhood",
+      "name": "Robinhood Chain",
+      "uniswap": {
+        "poolManager": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
+        "positionManager": "0x58daec3116aae6D93017bAAea7749052E8a04fA7",
+        "quoter": "0x8Dc178eFB8111BB0973Dd9d722ebeFF267c98F94",
+        "stateView": "0xF3334192D15450CdD385c8B70e03f9A6bD9E673b",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": null,
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x204FAca1764B154221e35c0d20aBb3c525710498"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "6180753054346818345",
+        "router": "0x06fC836cf9839B1cd891C440A0a45242DA6Ae1c9",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0xe8464c353210Cc398A45dB2454FBc5BCd25fFf20",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "137",
+        "143",
+        "999",
+        "8453",
+        "42161",
+        "43114"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x492641F648a4986844848E0beFE66D14817bCE34",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.mainnet.chain.robinhood.com",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x492641F648a4986844848E0beFE66D14817bCE34",
+        "decimals": 18
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "5042": {
+      "chainId": 5042,
+      "key": "arc",
+      "name": "Arc",
+      "uniswap": {
+        "poolManager": "0x8366a39CC670B4001A1121B8F6A443A643e40951",
+        "positionManager": "0x6049c9a0e26405C0985f9E3685C87d0aE917f82B",
+        "quoter": "0x8Dc178eFB8111BB0973Dd9d722ebeFF267c98F94",
+        "stateView": "0xF3334192D15450CdD385c8B70e03f9A6bD9E673b",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": null,
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x8702463e73f74d0b6765aBceb314Ef07aCb92650"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "6370580034781731079",
+        "router": "0xB79791184973589c38e114D43Eb8E4588C283A18",
+        "feeTokens": [
+          "LINK",
+          "USDC"
+        ],
+        "rmn": "0x9A82E768C885DEF7C4b47451Fd4Db53d8B21ed07",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "137",
+        "4217",
+        "8453"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x76a443768A5e3B8d1AED0105FC250877841Deb40",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.mainnet.arc.io",
+      "native": "USDC",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x76a443768A5e3B8d1AED0105FC250877841Deb40",
+        "decimals": 18
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "8453": {
+      "chainId": 8453,
+      "key": "base",
+      "name": "Base",
+      "uniswap": {
+        "poolManager": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+        "positionManager": "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+        "quoter": "0xE1A6C5803e3c44368b171BD680c7D32dfc92CA47",
+        "stateView": "0xA3c0c9b65baD0b08107Aa264b0f3dB444b867A71",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xCF6220e4496B091a6b391D48e770f1FbaC63E740",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xd6145b2D3F379919E8CdEda7B97e37c4b2Ca9c40"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "15971525489660198786",
+        "router": "0x881e3A65B4d4a04dD529061dd0071cf975F58bCD",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0xC842c69d54F83170C42C4d556B4F6B2ca53Dd3E8",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "130",
+        "137",
+        "143",
+        "196",
+        "999",
+        "1868",
+        "4217",
+        "4326",
+        "4663",
+        "5042",
+        "42161",
+        "42220",
+        "43114",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": {
+          "address": "0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://mainnet.base.org",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "liquidity": "548833118910527983",
+        "poolId": "0xe070797535b13431808f8fc81fdbe7b41362960ed0b55bc2b6117c49c51b7eb9",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        137,
+        42161,
+        43114
+      ]
+    },
+    "42161": {
+      "chainId": 42161,
+      "key": "arbitrum",
+      "name": "Arbitrum",
+      "uniswap": {
+        "poolManager": "0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32",
+        "positionManager": "0xd88F38F930b7952f2DB2432Cb002E7abbF3dD869",
+        "quoter": "0x8928074CA1b241D8Ec02815881c1Af11E8bC5219",
+        "stateView": "0x76Fd297e2D437cd7f76d50F01AfE6160f86e9990",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x37324D81e318260DC4f0fCb68035028eFdE6F50e",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x2d01411773c8C24805306E89A41F7855C3c4Fe65"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "4949039107694359620",
+        "router": "0x141fa059441E0ca23ce184B6A78bafD2A517DdE8",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0xC311a21e6fEf769344EB1515588B9d535662a145",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "130",
+        "137",
+        "143",
+        "196",
+        "999",
+        "1868",
+        "4217",
+        "4663",
+        "8453",
+        "42220",
+        "43114",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": null
+      },
+      "rpc": "https://arb1.arbitrum.io/rpc",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        "symbol": "WETH"
+      },
+      "referencePool": {
+        "fee": 500,
+        "tickSpacing": 10,
+        "liquidity": "503150056412031777",
+        "poolId": "0x864abca0a6202dba5b8868772308da953ff125b0f95015adbf89aaf579e903a8",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        137,
+        143,
+        999,
+        8453,
+        43114,
+        57073
+      ]
+    },
+    "42220": {
+      "chainId": 42220,
+      "key": "celo",
+      "name": "Celo",
+      "uniswap": {
+        "poolManager": "0x288dc841A52FCA2707c6947B3A777c5E56cd87BC",
+        "positionManager": "0xf7965f3981e4D5BC383BfBCb61501763e9068CA9",
+        "quoter": "0x28566da1093609182dFf2cB2A91CFD72e61d66cd",
+        "stateView": "0xbc21f8720BABf4b20d195eE5C6e99c52b76F2bfb",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x8eEa35913DdeD795001562f9bA5b282d3ac04B60",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xe2023F3FA515cF070e07fD9d51c1d236e07843f4"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "1346049177634351622",
+        "router": "0xfB48f15480926A4ADf9116Dca468bDd2EE6C5F62",
+        "feeTokens": [
+          "LINK",
+          "WCELO",
+          "CELO"
+        ],
+        "rmn": "0x56e0507d4E69D98bE7Eb4ada01d2315596F9f281",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "130",
+        "137",
+        "480",
+        "1868",
+        "8453",
+        "42161",
+        "57073"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0xd07294e6E917e07dfDcee882dd1e2565085C2ae0",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://forno.celo.org",
+      "native": "CELO",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0xd07294e6E917e07dfDcee882dd1e2565085C2ae0",
+        "decimals": 18
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "43114": {
+      "chainId": 43114,
+      "key": "avalanche",
+      "name": "Avalanche",
+      "uniswap": {
+        "poolManager": "0x06380C0e0912312B5150364B9DC4542BA0DbBc85",
+        "positionManager": "0xB74b1F14d2754AcfcbBe1a221023a5cf50Ab8ACD",
+        "quoter": "0xf27e532878B622d6b916F524E8711880107D4eF0",
+        "stateView": "0xc3c9e198C735a4b97e3e683f391cCBDD60B69286",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": null,
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x661E93cca42AfacB172121EF892830cA3b70F08d"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "6433500567565415381",
+        "router": "0xF4c7E640EdA248ef95972845a62bdC74237805dB",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WAVAX",
+          "AVAX"
+        ],
+        "rmn": "0xcBD48A8eB077381c3c4Eb36b402d7283aB2b11Bc",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "130",
+        "137",
+        "143",
+        "196",
+        "4217",
+        "4326",
+        "4663",
+        "8453",
+        "42161",
+        "57073",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": null
+      },
+      "rpc": "https://api.avax.network/ext/bc/C/rpc",
+      "native": "AVAX",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7",
+        "symbol": "WAVAX"
+      },
+      "referencePool": {
+        "fee": 500,
+        "tickSpacing": 10,
+        "liquidity": "17792515024790083",
+        "poolId": "0x6874d3d2b99e6b75ed2fae390907e1d921d4b06b7f48fc6d3fe9c547507e369c",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        137,
+        8453,
+        42161
+      ]
+    },
+    "57073": {
+      "chainId": 57073,
+      "key": "ink",
+      "name": "Ink",
+      "uniswap": {
+        "poolManager": "0x360E68faCcca8cA495c1B759Fd9EEe466db9FB32",
+        "positionManager": "0x1b35d13a2E2528f192637F14B05f0Dc0e7dEB566",
+        "quoter": "0x8928074CA1b241D8Ec02815881c1Af11E8bC5219",
+        "stateView": "0x76Fd297e2D437cd7f76d50F01AfE6160f86e9990",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0x282A3C4D320Cc7f0d5eaf56B8029e4B88338f0a3",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0x661E93cca42AfacB172121EF892830cA3b70F08d"
+      },
+      "tradingApi": true,
+      "uniswapX": true,
+      "ccip": {
+        "selector": "3461204551265785888",
+        "router": "0xca7c90A52B44E301AC01Cb5EB99b2fD99339433A",
+        "feeTokens": [
+          "GHO",
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x3A293fa336E118900AD0f2EcfeC0DAa6A4DeDaA1",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1",
+        "56",
+        "137",
+        "143",
+        "196",
+        "1868",
+        "4217",
+        "8453",
+        "42161",
+        "42220",
+        "43114",
+        "59144"
+      ],
+      "tokens": {
+        "usdc": {
+          "address": "0x2D270e6886d130D724215A266106e6832161EAEd",
+          "decimals": 6,
+          "poolType": "usdc"
+        },
+        "link": {
+          "address": "0x71052BAe71C25C78E37fD12E5ff1101A71d9018F",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc-gel.inkonchain.com",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "USDC",
+        "address": "0x2D270e6886d130D724215A266106e6832161EAEd",
+        "decimals": 6
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": {
+        "fee": 3000,
+        "tickSpacing": 60,
+        "liquidity": "550526251707991",
+        "poolId": "0x45a5aed4efc11ff55290b5504f357d6204f7027d14de4af56c1c23faecfb2583",
+        "base": "native"
+      },
+      "capabilities": {
+        "destination": true,
+        "source": true
+      },
+      "payoutLanes": [
+        42161
+      ]
+    },
+    "59144": {
+      "chainId": 59144,
+      "key": "linea",
+      "name": "Linea",
+      "uniswap": {
+        "poolManager": "0x248083Fb965359d82b06C1F5322480Dcfc1AD857",
+        "positionManager": "0xdDCAD5775B2816a87495f207731b3571D7EE3c76",
+        "quoter": "0x2C125569C0BeE20A66E33E5491C552B37EBD9934",
+        "stateView": "0xE861de206E460A8b936b05ad3816520B58ccDf9b",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": "0xF025e0Fe9E331A0eF05c2ad3C4E9C64b625cda6f",
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xDc264714F68d84CF29BC605589405E78bDBE7C9f"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "4627098889531055414",
+        "router": "0x549FEB73F2348F6cD99b9fc8c69252034897f06C",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0x1F8fbCf559f08FE7c4076f0d68DB861e1E27f95b",
+        "cursedAtGeneration": false
+      },
+      "lanesTo": [
+        "1",
+        "10",
+        "56",
+        "137",
+        "196",
+        "4217",
+        "8453",
+        "42161",
+        "43114",
+        "57073"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0xa18152629128738a5c081eb226335FEd4B9C95e9",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.linea.build",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "feeOnTransferDetector": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0xa18152629128738a5c081eb226335FEd4B9C95e9",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
+        "symbol": "WETH"
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    },
+    "7777777": {
+      "chainId": 7777777,
+      "key": "zora",
+      "name": "Zora",
+      "uniswap": {
+        "poolManager": "0x0575338e4C17006aE181B47900A84404247CA30f",
+        "positionManager": "0xf66C7b99e2040f0D9b326B3b7c152E9663543D63",
+        "quoter": "0x2a7AaD35a2EbD95c1dC5AE323E866a737Bf79523",
+        "stateView": "0x385785Af07d63b50d0a0ea57C4FF89D06adf7328",
+        "reservesLens": "0x0000001b173C3bbF3984D417d8614E3eed34865B",
+        "feeOnTransferDetector": null,
+        "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+        "universalRouter": "0xF025e0Fe9E331A0eF05c2ad3C4E9C64b625cda6f"
+      },
+      "tradingApi": true,
+      "uniswapX": false,
+      "ccip": {
+        "selector": "3555797439612589184",
+        "router": "0x65b40941fa86Fc444043257cd677a7F0bD034F79",
+        "feeTokens": [
+          "LINK",
+          "WETH",
+          "ETH"
+        ],
+        "rmn": "0xFb6e1F0041c273dE4b99B23E2cB4c12CECe06C56",
+        "cursedAtGeneration": true
+      },
+      "lanesTo": [
+        "1"
+      ],
+      "tokens": {
+        "usdc": null,
+        "link": {
+          "address": "0x3662B6f73c5560229D1a98aF6e59E6649D568374",
+          "decimals": 18
+        }
+      },
+      "rpc": "https://rpc.zora.energy/",
+      "native": "ETH",
+      "codeChecks": {
+        "poolManager": true,
+        "positionManager": true,
+        "quoter": true,
+        "stateView": true,
+        "reservesLens": true,
+        "universalRouter": true,
+        "permit2": true,
+        "ccipRouter": true
+      },
+      "payoutToken": {
+        "symbol": "LINK",
+        "address": "0x3662B6f73c5560229D1a98aF6e59E6649D568374",
+        "decimals": 18
+      },
+      "wrappedNative": {
+        "address": "0x4200000000000000000000000000000000000006",
+        "symbol": "WETH"
+      },
+      "referencePool": null,
+      "capabilities": {
+        "destination": false,
+        "source": false
+      },
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)"
+    }
+  }
+}

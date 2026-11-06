@@ -12,6 +12,7 @@ optimizer_runs = 800
 fs_permissions = [
   { access = "read-write", path = "./deployments" },
   { access = "read", path = "./offchain" },
+  { access = "read-write", path = "./chains" },
 ]
 
 [fuzz]

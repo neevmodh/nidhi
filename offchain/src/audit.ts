@@ -21,6 +21,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { canonical, evaluateRubric, evidenceHashOf, fetchEvidence, grantIdOf, hashJson, hashText, modelIdentity } from "./lib.ts";
 import { runJury } from "./llm/jury.ts";
+import { usdValue } from "./uniswap/tradingApi.ts";
 import { SYSTEM_PROMPT } from "./llm/types.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +81,23 @@ async function main() {
   }
   console.log(`  JURY  ${jury.reviewed} reviewed, ${jury.inconsistentVotes} inconsistent, veto at ${jury.vetoThreshold} -> ${jury.veto ? "VETO" : "no veto"}`);
 
+  // Indicative USD value of the grant (Uniswap Trading API, mainnet WETH->USDC). Informational: never gates payment.
+  const valuation = process.env.UNISWAP_API_KEY
+    ? {
+        source: "uniswap-trading-api",
+        pair: "WETH->USDC (chain 1)",
+        usd: await usdValue(
+          "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+          String(grant.amountInWei),
+          1,
+          "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "0x0000000000000000000000000000000000000001",
+        ),
+        at: new Date().toISOString(),
+      }
+    : { source: "unavailable (no UNISWAP_API_KEY)" };
+  if ("usd" in valuation) console.log(`  VALUE ~$${valuation.usd?.toFixed(4) ?? "?"} (Uniswap Trading API, indicative)`);
+
   const rulesPass = results.every((r) => r.pass);
   const pass = rulesPass && !jury.veto;
 
@@ -88,7 +106,7 @@ async function main() {
   const rubricHash = hashJson(rubric);
   const promptHash = hashText(SYSTEM_PROMPT);
   const modelHash = hashText(modelIdentity(jury.jurors));
-  const output = { results, jury, pass };
+  const output = { results, jury, valuation, pass };
   const outputHash = hashJson(output);
   const evidenceHash = evidenceHashOf({ inputsHash, rubricHash, promptHash, modelHash, outputHash });
   const grantId = grantIdOf(label);

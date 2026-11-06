@@ -1,0 +1,64 @@
+{
+  "source": {
+    "chainId": 11155111,
+    "stack": "ens"
+  },
+  "milestones": {
+    "m1": {
+      "title": "Document the milestone agent",
+      "repo": "neevmodh/nidhi",
+      "rfp": "rfp/m1.md",
+      "grantee": "alice",
+      "payTo": 84532,
+      "amountInWei": "300000000000000",
+      "requiredPathGlobs": [
+        "docs/**"
+      ],
+      "rules": {
+        "requireMerged": true,
+        "minApprovals": 0,
+        "requireNoFailedChecks": true,
+        "requiredPathGlobs": [
+          "docs/**"
+        ],
+        "maxFilesChanged": 60
+      },
+      "note": "Demo milestone: no approving review required, so one person can run the whole demo.",
+      "rfpText": "# Milestone m1: Document the milestone agent\n\nWrite a guide under `docs/` that explains, for a new contributor, how a Nidhi milestone is paid:\nhow the DAO pre-signs the milestone, how to tag a pull request with the milestone id, what the agent checks,\nand where to see the payout. Accept when the guide is merged, CI is green and it lives under `docs/`.\n",
+      "committed": true,
+      "specHash": "0x3bbf4eaddcbec4f8b0569d335933f04ea1b4ef232f49889751d1ea19ef665177",
+      "grantId": "0xcfc477412949bcbb80125f53e5d5291b704d8f5707183b5f0d84cbf8bc9993c3",
+      "approver": "0xcb83DbB16c6C5700B59c94184E1eFe21bAFb972D",
+      "committedAt": "2026-11-06T04:09:19.383Z",
+      "deadline": 1796530159
+    },
+    "m2": {
+      "title": "Improve the Milestones screen",
+      "repo": "neevmodh/nidhi",
+      "rfp": "rfp/m2.md",
+      "grantee": "bob",
+      "payTo": 421614,
+      "amountInWei": "300000000000000",
+      "requiredPathGlobs": [
+        "ui/src/**"
+      ],
+      "rules": {
+        "requireMerged": true,
+        "minApprovals": 1,
+        "requireNoFailedChecks": true,
+        "requiredPathGlobs": [
+          "ui/src/**"
+        ],
+        "maxFilesChanged": 60
+      },
+      "note": "Standard rules: merged, one approving review, CI green. Paid to bob.nidhi-dao.eth on Arbitrum Sepolia.",
+      "rfpText": "# Milestone m2: Improve the Milestones screen\n\nImprove the app's Milestones screen (`ui/src/`): clearer status for each milestone, or a better empty state.\nAccept when the change is merged with one approving review and CI is green.\n",
+      "committed": true,
+      "specHash": "0x4a6721b87e2a9a94fd31f90a319a7255a8da12d23d60076e18d7e13a4a47e6e6",
+      "grantId": "0xb53c1854c2d40efbb673f2ade96889cafad3a4a28e27429d15530f0370275e8a",
+      "approver": "0xcb83DbB16c6C5700B59c94184E1eFe21bAFb972D",
+      "committedAt": "2026-11-06T04:09:20.175Z",
+      "deadline": 1796530160
+    }
+  }
+}

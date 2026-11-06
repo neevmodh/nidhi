@@ -23,13 +23,13 @@ contract EdgeCasesTest is NidhiBase {
 
     function test_nativeFeesOnBothLanes() public {
         CCIPLocalRouter(address(ccipRouter)).setFee(0.01 ether);
-        NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), address(0), chainSelector, daoOwner);
-        DestinationReceiver r =
-            new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), address(0), daoOwner);
+        NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), address(0), daoOwner);
+        DestinationReceiver r = new DestinationReceiver(address(ccipRouter), address(0), daoOwner);
         vm.startPrank(daoOwner);
         d.setHook(address(this)); // this test plays the hook
-        d.setDestReceiver(address(r));
-        r.setSourceDispatcher(address(d));
+        d.addDestination(chainSelector, address(r));
+        r.addSource(chainSelector, address(d));
+        r.allowToken(address(bnm));
         vm.stopPrank();
         vm.deal(address(d), 1 ether);
         vm.deal(address(r), 1 ether);
@@ -55,10 +55,10 @@ contract EdgeCasesTest is NidhiBase {
 
     function test_revert_insufficientNativeFee() public {
         CCIPLocalRouter(address(ccipRouter)).setFee(0.01 ether);
-        NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), address(0), chainSelector, daoOwner);
+        NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), address(0), daoOwner);
         vm.startPrank(daoOwner);
         d.setHook(address(this));
-        d.setDestReceiver(address(receiver));
+        d.addDestination(chainSelector, address(receiver));
         vm.stopPrank();
         Mandate memory m = _mandate(_newGrantId(), AMOUNT_IN);
         bnm.drip(address(d));
@@ -69,7 +69,7 @@ contract EdgeCasesTest is NidhiBase {
     // =================================================================== dispatcher guards
 
     function test_revert_dispatcherGuards() public {
-        NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), link, chainSelector, daoOwner);
+        NidhiDispatcher d = new NidhiDispatcher(address(ccipRouter), link, daoOwner);
         vm.prank(daoOwner);
         vm.expectRevert(NidhiDispatcher.ZeroAddress.selector);
         d.setHook(address(0));
@@ -77,13 +77,17 @@ contract EdgeCasesTest is NidhiBase {
         d.setHook(address(this));
 
         Mandate memory m = _mandate(_newGrantId(), AMOUNT_IN);
-        vm.expectRevert(NidhiDispatcher.NotConfigured.selector);
+        vm.expectRevert(abi.encodeWithSelector(NidhiDispatcher.NotConfigured.selector, chainSelector));
         d.dispatch(m, 1);
 
         vm.startPrank(daoOwner);
         vm.expectRevert(NidhiDispatcher.ZeroAddress.selector);
-        d.setDestReceiver(address(0));
-        d.setDestReceiver(address(receiver));
+        d.addDestination(chainSelector, address(0));
+        vm.expectRevert(NidhiDispatcher.ZeroAddress.selector);
+        d.addDestination(0, address(receiver));
+        d.addDestination(chainSelector, address(receiver));
+        vm.expectRevert(NidhiDispatcher.AlreadySet.selector);
+        d.addDestination(chainSelector, address(1)); // add-only: a route can never be re-pointed
         d.setDestGasLimit(700_000);
         vm.stopPrank();
         assertEq(d.destGasLimit(), 700_000);
@@ -205,7 +209,7 @@ contract EdgeCasesTest is NidhiBase {
 
     function test_revert_receiverInternalsAreSelfOnly() public {
         vm.expectRevert(DestinationReceiver.OnlySelf.selector);
-        receiver.executePayout(address(this), 1);
+        receiver.executePayout(address(bnm), address(this), 1);
         vm.expectRevert(DestinationReceiver.OnlySelf.selector);
         receiver.sendAck(bytes32(0));
     }
@@ -222,18 +226,26 @@ contract EdgeCasesTest is NidhiBase {
         vm.stopPrank();
         assertEq(receiver.ackGasLimit(), 250_000);
 
-        // fee token can never be the bridged grant token
-        DestinationReceiver r2 =
-            new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), address(bnm), daoOwner);
-        vm.prank(daoOwner);
+        // a grant token can never be withdrawn as "fees", even if it is also the configured fee token
+        DestinationReceiver r2 = new DestinationReceiver(address(ccipRouter), address(bnm), daoOwner);
+        vm.startPrank(daoOwner);
+        r2.allowToken(address(bnm));
         vm.expectRevert(DestinationReceiver.UnexpectedTokens.selector);
         r2.withdrawFees(daoOwner, 1);
 
+        // allowlist and source routes are add-only and reject zero values
+        vm.expectRevert(DestinationReceiver.AlreadySet.selector);
+        r2.allowToken(address(bnm));
         vm.expectRevert(DestinationReceiver.ZeroAddress.selector);
-        new DestinationReceiver(address(ccipRouter), chainSelector, address(0), address(0), daoOwner);
-        vm.prank(daoOwner);
+        r2.allowToken(address(0));
         vm.expectRevert(DestinationReceiver.ZeroAddress.selector);
-        r2.setSourceDispatcher(address(0));
+        r2.addSource(chainSelector, address(0));
+        vm.expectRevert(DestinationReceiver.ZeroAddress.selector);
+        r2.addSource(0, address(1));
+        r2.addSource(chainSelector, address(1));
+        vm.expectRevert(DestinationReceiver.AlreadySet.selector);
+        r2.addSource(chainSelector, address(2)); // a trusted source can never be re-pointed
+        vm.stopPrank();
     }
 
     // =================================================================== router guards
