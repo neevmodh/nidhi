@@ -23,7 +23,7 @@ import { sepolia } from "viem/chains";
 import { evaluateRubric, fetchEvidence, findMilestonePr, hashJson, hashText } from "./lib.ts";
 import { runJury } from "./llm/jury.ts";
 import { loadMilestones, mandatePath, readMandate } from "./milestone.ts";
-import { ATTESTATION_TYPES, MANDATE_TYPES, MAX_SQRT, MIN_SQRT, RPCS, domain, hookData, poolKey, publicClient, repoRoot, sourceStack, toJson, zeroForOne } from "./stack.ts";
+import { ATTESTATION_TYPES, MANDATE_TYPES, MAX_SQRT, MIN_SQRT, RPCS, transport, domain, hookData, poolKey, publicClient, repoRoot, sourceStack, toJson, zeroForOne } from "./stack.ts";
 import { boardAbi, boardDeployment, bountySpecHash, ensureContributorName, githubOf, readBounties, validLabel, type BoardBounty } from "./bounty.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -52,7 +52,7 @@ async function publishToEns(id: string, value: string): Promise<Hex | null> {
   const account = privateKeyToAccount(key);
   const pub = publicClient(11155111);
   if ((await pub.getBalance({ address: account.address })) === 0n) { log(id, "ENS publish skipped: the agent key has no Sepolia gas"); return null; }
-  const wallet = createWalletClient({ chain: sepolia, transport: http(RPCS[11155111][0]), account });
+  const wallet = createWalletClient({ chain: sepolia, transport: transport(11155111), account });
   const hash = await wallet.writeContract({ address: subs.grantsResolver, abi: parseAbi(["function setText(bytes name, string key, string value)"]), functionName: "setText", args: [toHex(name), "nidhi.attestation", value] });
   await pub.waitForTransactionReceipt({ hash });
   return hash;
@@ -122,7 +122,7 @@ async function pay(id: string, mandate: any, approver: Address, approverSig: Hex
   if (paused) { log(id, "the guardian has paused grants: payout waits"); return null; }
   if ((left as bigint) < BigInt(mandate.amountIn)) { log(id, "today's cap is used up: payout retries tomorrow"); return null; }
 
-  const wallet = createWalletClient({ chain: sepolia, transport: http(RPCS[s.chainId][0]), account: executor });
+  const wallet = createWalletClient({ chain: sepolia, transport: transport(s.chainId), account: executor });
   const send = async (what: string, p: Promise<Hex>) => { const h = await p; await pub.waitForTransactionReceipt({ hash: h }); log(id, `  ${what}: ${h}`); return h; };
   const amountIn = BigInt(mandate.amountIn);
   const weth = (await pub.readContract({ address: s.base, abi: wethAbi, functionName: "balanceOf", args: [executor.address] })) as bigint;

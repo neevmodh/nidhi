@@ -9,7 +9,7 @@ import { createWalletClient, http, keccak256, parseEther, toHex, zeroAddress, ty
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { boardAbi, boardDeployment, bountySpecHash } from "./bounty.ts";
-import { RPCS, poolKey, publicClient, repoRoot, sourceStack, zeroForOne } from "./stack.ts";
+import { RPCS, poolKey, publicClient, repoRoot, sourceStack, transport, zeroForOne } from "./stack.ts";
 
 if (fs.existsSync(path.join(repoRoot, ".env"))) process.loadEnvFile(path.join(repoRoot, ".env"));
 const quoterAbi = [{ type: "function", name: "quoteExactInputSingle", stateMutability: "nonpayable",
@@ -39,7 +39,7 @@ async function main() {
     deadline: BigInt(Math.floor(Date.now() / 1000) + (a.days ?? 14) * 86400),
   };
   const account = privateKeyToAccount(process.env.APPROVER_PRIVATE_KEY as Hex);
-  const w = createWalletClient({ chain: sepolia, transport: http(RPCS[11155111][0]), account });
+  const w = createWalletClient({ chain: sepolia, transport: transport(11155111), account });
   const { request, result: id } = await pub.simulateContract({ account, address: board.board, abi: boardAbi, functionName: "post", args: [bounty, spec] });
   const hash = await w.writeContract(request);
   await pub.waitForTransactionReceipt({ hash });
