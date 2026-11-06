@@ -1,90 +1,108 @@
-# Nidhi: mandate-gated, ENS-native, cross-chain grant payouts
+# Nidhi: mandate-gated, cross-chain grant payouts
 
 **ETHGlobal Mumbai.** A Uniswap v4 hook turns one pool into a DAO payout rail. A grant moves only if:
-- a DAO **approver** and an **AI auditor** have signed for it (EIP-712), and both hold roles delegated through the DAO's **ENSv2** name;
-- the recipient is exactly what the grantee's **ENS subname** resolves to on the payout chain;
-- the grant fits the **daily cap**, the **ENS guardian** has not paused payouts, and nobody has cancelled the grant.
+- a DAO **approver** and an **AI auditor** have each signed it (EIP-712), and both hold their role in the DAO's authority
+  (**ENSv2** on Sepolia, or the DAO-owned `RoleAuthority` on every other chain);
+- the recipient is exactly what the grantee's **name** resolves to on the payout chain;
+- the grant fits the **daily cap**, the **guardian** has not paused payouts, and nobody has cancelled the grant.
 
-The swap output goes straight into **Chainlink CCIP** to the grantee on Base. The destination's **acknowledgement** closes the loop on-chain, and **Chainlink Automation** retries anything that gets stuck.
+The swap output goes straight into **Chainlink CCIP** to the grantee on another chain. The destination's
+**acknowledgement** closes the loop on-chain, and **Chainlink Automation** can retry anything that gets stuck.
 
 > **The problem: "blind send."** A DAO payout today is several separate multisig transactions: swap, then hold, then bridge. Nothing cryptographically links the approved mandate, the conversion and the settlement.
 > **Nidhi's answer:** authorization, conversion and dispatch happen in **one source-chain transaction or not at all**, and every grant is tracked until it is `SETTLED`.
 
-**Live dashboard:** https://neevmodh.github.io/nidhi/ discovers every contract from `nidhi-dao.eth` and hard-codes nothing.
+**App:** https://neevmodh.github.io/nidhi/ (live chain data, no hard-coded numbers). **Architecture diagrams:**
+[ENS](docs/architecture/01-ens.md) · [Uniswap v4](docs/architecture/02-uniswap-v4.md) · [Chainlink CCIP](docs/architecture/03-chainlink-ccip.md).
 
 ```
  grants.json ─▶ AI auditor (rubric decides; Groq/Gemini/Cerebras jury may veto) ─signs Attestation─┐
                                                                                                     ▼
  approver ─signs Mandate─▶ NidhiSwapRouter ─▶ PoolManager ─▶ NidhiHook.beforeSwap
-                                                              ├─ not paused (ENS guardian), within daily cap, not cancelled
+                                                              ├─ not paused (guardian), within daily cap, not cancelled
                                                               ├─ EIP-712 x2: ECDSA / EIP-7702 / ERC-1271
-                                                              ├─ ENSv2: nidhi-dao.eth → resolver → EAC roles (approver, auditor)
-                                                              ├─ ENSv2: alice.nidhi-dao.eth → addr(Base) == mandate.recipient
+                                                              ├─ authority: APPROVER + AUDITOR roles (ENSv2 or RoleAuthority)
+                                                              ├─ authority: resolveGrantee(label, destChain) == mandate.recipient
                                                               └─ bound to pool, direction, exact input, executor, deadline, one use
                                                           swap (flash accounting)
-                                                          NidhiHook.afterSwap: output ∈ [minOut,maxOut] → take() → CCIP
- Base Sepolia: DestinationReceiver ─ pays grantee (or HOLDS) ─ ACK ─▶ SETTLED      Automation ─ retries ACKs / held payouts
+                                                          NidhiHook.afterSwap: output in band, price guard → take() → CCIP
+ any lane:  DestinationReceiver ─ pays grantee (or HOLDS) ─ ACK ─▶ SETTLED      Automation ─ retries ACKs / held payouts
 ```
 
-## Live deployment (v3, testnet)
+## Live deployment (v4, four testnets)
 
-Every address below is also published as an ENS text record on `nidhi-dao.eth` (`nidhi.contract.*`).
+Every chain runs both sides (dispatcher and receiver), wired along real CCIP lanes. The payout token is CCIP-BnM.
+Ownership is handed to the DAO admin `0x9f75…b9C7` (Ownable2Step).
 
-| Component | Chain | Address |
-|---|---|---|
-| `nidhi-dao.eth` resolver (roles + contract records) | Sepolia | [`0x0D919208…aBbF`](https://sepolia.etherscan.io/address/0x0D919208f68a4156E7580B9101171fa72dECaBbF) |
-| `NidhiHook` (flags `0xC4`, daily cap 0.001 WETH) | Sepolia | [`0x77099032…00c4`](https://sepolia.etherscan.io/address/0x7709903218297e3cB9bCbb61fee8cEC8514000c4) |
-| `NidhiDispatcher` | Sepolia | [`0x5C35D156…2bE1`](https://sepolia.etherscan.io/address/0x5C35D15630af501bf73506eE6cBa37A24cC42bE1) |
-| `NidhiSwapRouter` | Sepolia | [`0x8d0b4e8d…58A3`](https://sepolia.etherscan.io/address/0x8d0b4e8d05736e09627F18EE2761F37fd9B558A3) |
-| `ENSv2Authority` | Sepolia | [`0x439549E7…4B28`](https://sepolia.etherscan.io/address/0x439549E7A153b43E8c307E1Ab8543Aa28D524B28) |
-| ENSv2 subregistry for `*.nidhi-dao.eth` | Sepolia | [`0x562FB95c…C656`](https://sepolia.etherscan.io/address/0x562FB95c17272B850c99496e565bA5eCEDA6C656) |
-| Grants resolver (`alice.`, `auditor.` records) | Sepolia | [`0x0195E12d…bd4A`](https://sepolia.etherscan.io/address/0x0195E12dD817F97e7CF7226858F64B8a6BC9bd4A) |
-| Pool liquidity: PositionManager NFT **#41398**, owned by the DAO | Sepolia | [PositionManager](https://sepolia.etherscan.io/address/0x429ba70129df741B2Ca2a85BC3A2a3328e5c09b4) |
-| `DestinationReceiver` (Automation-compatible) | Base Sepolia | [`0x11252C99…0216`](https://sepolia.basescan.org/address/0x11252C994ccba7BE458D78C8901dAD6B5D1F0216) |
+| Chain | `NidhiHook` (flags `0xC4`) | `NidhiDispatcher` | `DestinationReceiver` | `RoleAuthority` |
+|---|---|---|---|---|
+| Ethereum Sepolia | [`0xa020A751…c0c4`](https://sepolia.etherscan.io/address/0xa020A75106A7a5094Fb0530692Ee8aaADe7fc0c4) | [`0x438E5Db9…5115`](https://sepolia.etherscan.io/address/0x438E5Db9667Ada9B2b892aC2bcAC4E3a5a725115) | [`0x4E5A6ce8…C690`](https://sepolia.etherscan.io/address/0x4E5A6ce89eaDE86be64f1Bb095aA3b45C371C690) | [`0xeBA6566B…15b9`](https://sepolia.etherscan.io/address/0xeBA6566Bee077966F9d28D6d230102e6D43D15b9) |
+| Base Sepolia | [`0xB703D879…80c4`](https://sepolia.basescan.org/address/0xB703D879B1F3fE33184841B42bc61097133A80c4) | [`0xc7Bfda6A…31A2`](https://sepolia.basescan.org/address/0xc7Bfda6AC241f12fb21E491866d919A1B03431A2) | [`0x0c892F69…7958`](https://sepolia.basescan.org/address/0x0c892F6905C3C9b4Fb5dA628B3F8048e09107958) | [`0x8C507e44…13BE`](https://sepolia.basescan.org/address/0x8C507e4407466A2550E16EAe3a6BE8ABAa5C13BE) |
+| Arbitrum Sepolia | [`0x56d56254…80c4`](https://sepolia.arbiscan.io/address/0x56d56254A518142375E9eA9a69f310aB8D7b80c4) | [`0xB2ab0955…D36A`](https://sepolia.arbiscan.io/address/0xB2ab0955a101802Bc9e2F1ec099Bd74Aed9bD36A) | [`0xd52365cA…D6B9`](https://sepolia.arbiscan.io/address/0xd52365cA8Fa5Cf07f3Bd9dFd64c024E455F4D6B9) | [`0x11252C99…0216`](https://sepolia.arbiscan.io/address/0x11252C994ccba7BE458D78C8901dAD6B5D1F0216) |
+| Unichain Sepolia | [`0x2835f2af…C0c4`](https://unichain-sepolia.blockscout.com/address/0x2835f2af22486B547EE2E3F94805160b380bC0c4) | [`0xB2ab0955…D36A`](https://unichain-sepolia.blockscout.com/address/0xB2ab0955a101802Bc9e2F1ec099Bd74Aed9bD36A) | [`0xd52365cA…D6B9`](https://unichain-sepolia.blockscout.com/address/0xd52365cA8Fa5Cf07f3Bd9dFd64c024E455F4D6B9) | [`0x11252C99…0216`](https://unichain-sepolia.blockscout.com/address/0x11252C994ccba7BE458D78C8901dAD6B5D1F0216) |
 
-### Live proof (real transactions)
+Lanes wired: Sepolia ⇄ Base, Sepolia ⇄ Arbitrum, Sepolia ⇄ Unichain, Base ⇄ Arbitrum, Arbitrum ⇄ Unichain. All addresses
+are in `deployments/<chainId>.json`; chain data comes from `chains/testnets.json`, generated and checked on-chain by
+`offchain/src/testnets.ts`.
+
+### Live proof (v4, real transactions)
 
 | What happened | Evidence |
 |---|---|
-| **Grant `nidhi-003`, paid to `alice.nidhi-dao.eth`:** audited and signed by the AI auditor key; ENS roles and the ENS recipient checked; swapped; bridged; paid on Base; ACK received → `SETTLED` | [swap tx `0x1a511bb2…`](https://sepolia.etherscan.io/tx/0x1a511bb2c3314dc630cd491970577b0c3e53376b101ed897d7a83b9c8e823648) · [CCIP `0x6c382c72…`](https://ccip.chain.link/msg/0x6c382c7228f29aa035573ffff8f3f7ba62da4361abd23f83f0399008c47b13a5) |
+| **Base Sepolia → Arbitrum Sepolia:** signed, swapped in the hook, bridged, 0.2934 BnM paid to the grantee, ACK back → `SETTLED` | [swap](https://sepolia.basescan.org/tx/0xdd2b11a77fa318b95c812589f07211ad71e0fbc0e174fc6b78487a1bc1b328a0) · [CCIP](https://ccip.chain.link/msg/0x60433b4f9215063950bde9736f3618766fdbbdde7f43e895dba724fc3d2faf7e) · [payout](https://sepolia.arbiscan.io/tx/0x74c5f98f165389683c3201ce3b283e63e9965eaed03c5faed8d389e8f6d3c21c) |
+| **Sepolia → Base Sepolia:** same loop, 0.2917 BnM paid → `SETTLED` | [swap](https://sepolia.etherscan.io/tx/0xf2d1a270524c098410037c03720714fbe049fba9ba880b1463c0b3fd53f9207a) · [CCIP](https://ccip.chain.link/msg/0x9c3ddac23e4af71f197c9b71b36b36f11fdbc8068e25c8c6d36468d65ff1fdfa) · [payout](https://sepolia.basescan.org/tx/0xf3e05ffddcbd9e86ca12ae3c84783a1f1482824613f4ed6cbdf9449e1d628294) |
+| **The app's own signing code, on-chain:** a grant built, quoted (V4Quoter) and signed with `ui/src/lib/mandate.ts`, carrying the real audit evidence of `nidhi-001` | [swap](https://sepolia.basescan.org/tx/0x23c79346238efea4b006f4a6a9533d26a393609630783a38fb89c84170f76c74) ([`ui/scripts/e2e-grant.ts`](ui/scripts/e2e-grant.ts)) |
+
+The first two grants carried a fixed evidence hash; the third carries the auditor's real one.
+
+### Mainnet: rehearsed, not deployed
+
+`chains/registry.json` covers the 21 Uniswap v4 mainnets. Ten can send USDC by CCIP (50 lanes). The same Deploy / Wire /
+Handover scripts were run on forks of each against the real PoolManager, PositionManager, V4Quoter, StateView, CCIP router
+and USDC: Ethereum, Base, Arbitrum, Polygon, Avalanche, HyperEVM and Monad pass; Optimism, Unichain and Ink were skipped
+because their CCIP RMN was cursed when checked. Deploying needs a funded deployer (`node offchain/src/preflight.ts`).
+
+### Earlier live proof (v3, Sepolia → Base Sepolia, ENSv2, retired)
+
+| What happened | Evidence |
+|---|---|
+| **Grant `nidhi-003`, paid to `alice.nidhi-dao.eth`:** ENS roles and the ENS recipient checked; swapped; bridged; paid on Base; ACK → `SETTLED` | [swap tx](https://sepolia.etherscan.io/tx/0x1a511bb2c3314dc630cd491970577b0c3e53376b101ed897d7a83b9c8e823648) · [CCIP](https://ccip.chain.link/msg/0x6c382c7228f29aa035573ffff8f3f7ba62da4361abd23f83f0399008c47b13a5) |
 | Guardian (ENS role) **paused** all payouts; a grant attempt then failed with `Paused` | [`0x9d90b420…`](https://sepolia.etherscan.io/tx/0x9d90b420432ea96357bc9797dcfeb5227ca1c6bfee6d38924ccdcf502b021a63) |
-| Guardian unpaused | [`0xd1506f51…`](https://sepolia.etherscan.io/tx/0xd1506f512e0ef1902c64a387b61f0e6c78184e582358f32241ef7cc52afabc78) |
 | DAO **revoked the approver's ENS role**; the next grant failed with `NotAuthorized` | [`0x0c667850…`](https://sepolia.etherscan.io/tx/0x0c667850e6d9f4c292d07beb30f7a1770fdab8dc6b2583866c504f62178e0a25) |
-| Role restored; grants allowed again | [`0xf2c8215c…`](https://sepolia.etherscan.io/tx/0xf2c8215ca89917b9bcce48c6d579a03347604ac9094f8b8da56f35f3e133af29) |
 | Approver **cancelled** a signed mandate; executing it failed with `GrantAlreadyUsed` | [`0x0753ee02…`](https://sepolia.etherscan.io/tx/0x0753ee0289831f1b3f00dd2577a72cebaa99d2bd9c3f785076c60beb9097e535) |
-| **Batch**: two grants in one transaction (all or nothing) | [`0x79ffe1e4…`](https://sepolia.etherscan.io/tx/0x79ffe1e465629d551db0361e45caea158e5a17506e6d5216eacd1ee66804a003) · CCIP [`0xe15be099…`](https://ccip.chain.link/msg/0xe15be099f5c976d8119afa4f5cc9271cefa30df22cbff145d265f26801def9a6), [`0xec3f761f…`](https://ccip.chain.link/msg/0xec3f761f677075800fc537f29eed83fa541d3444d17e58eb24c4333f52757958) |
-| Recipient swapped after signing failed with `BadSignature` | simulated against live state with [`07_LiveScenarios`](script/07_LiveScenarios.s.sol) `tamper()` (nothing sent) |
-| v1/v2 grant `nidhi-001`: the first full round trip, `SETTLED` | [swap tx `0xeef72833…`](https://sepolia.etherscan.io/tx/0xeef72833d24991172178bef1100955f8f45a54bbfcd93a08d511733c9ac03948) · [CCIP `0xdeaaa58f…`](https://ccip.chain.link/msg/0xdeaaa58fba42a708914c5bb4ea16f418808c7c26aa6834db5436c6da643f621b) |
+| **Batch**: two grants in one transaction (all or nothing) | [`0x79ffe1e4…`](https://sepolia.etherscan.io/tx/0x79ffe1e465629d551db0361e45caea158e5a17506e6d5216eacd1ee66804a003) |
+
+The v3 scripts are archived in [`legacy/sepolia-v3/`](legacy/sepolia-v3/).
 
 ## Sponsor integrations (with exact code)
 
 ### Uniswap v4: custom hook (`beforeSwap`, `afterSwap`, `afterSwapReturnDelta`)
 | What | Where |
 |---|---|
-| Minimal permissions `0xC4`, mined with `HookMiner` (CREATE2) | [`getHookPermissions` L120](src/NidhiHook.sol#L120), [`02_DeploySource`](script/02_DeploySource.s.sol) |
-| Firewall: pause, cap, router, executor, replay, signatures, roles, ENS recipient | [`_beforeSwap` L190](src/NidhiHook.sol#L190), [`_checkBinding` L221](src/NidhiHook.sol#L221), [`_checkSignatures` L234](src/NidhiHook.sol#L234), [`_checkRecipient` L266](src/NidhiHook.sol#L266) |
-| Capture: output band, `take()` into the dispatcher, return delta | [`_afterSwap` L286](src/NidhiHook.sol#L286), [`take` L307](src/NidhiHook.sol#L307) |
-| EIP-1153 transient grant handoff between the two callbacks | [`ACTIVE_GRANT_SLOT` L72](src/NidhiHook.sol#L72) |
+| Minimal permissions `0xC4`, mined with `HookMiner` (CREATE2) | [`getHookPermissions` L168](src/NidhiHook.sol#L168), [`Deploy.s.sol`](script/mainnet/Deploy.s.sol) |
+| Firewall: pause, cap, router, executor, replay, signatures, roles, ENS recipient | [`_beforeSwap` L238](src/NidhiHook.sol#L238), [`_checkBinding` L273](src/NidhiHook.sol#L273), [`_checkSignatures` L286](src/NidhiHook.sol#L286), [`_checkRecipient` L331](src/NidhiHook.sol#L331) |
+| Capture: output band, `take()` into the dispatcher, return delta | [`_afterSwap` L351](src/NidhiHook.sol#L351), [`take` L374](src/NidhiHook.sol#L374) |
+| EIP-1153 transient grant handoff between the two callbacks | [`ACTIVE_GRANT_SLOT` L105](src/NidhiHook.sol#L105) |
 | Trusted router with `msgSender()`; batch payouts in one unlock | [`msgSender` L39](src/NidhiSwapRouter.sol#L39), [`swapBatch` L74](src/NidhiSwapRouter.sol#L74), [`unlockCallback` L88](src/NidhiSwapRouter.sol#L88) |
-| Liquidity as a DAO-owned **PositionManager NFT** (Permit2, `MINT_POSITION` + `SETTLE_PAIR`) | [`_createPool`](script/02_DeploySource.s.sol), [`PosmSpike.t.sol`](test/fork/PosmSpike.t.sol) |
+| Liquidity as a DAO-owned **PositionManager NFT** (Permit2, `MINT_POSITION` + `SETTLE_PAIR`) | [`_mintUsdcOnly`](script/mainnet/Deploy.s.sol), [`PosmSpike.t.sol`](test/fork/PosmSpike.t.sol) |
 
 ### Chainlink: CCIP 2.0 in both directions + Automation
 | What | Where |
 |---|---|
-| Programmable token transfer (token + grant payload), LINK or native fees | [`dispatch` L122](src/NidhiDispatcher.sol#L122), [`ccipSend` L147](src/NidhiDispatcher.sol#L147) |
-| ACK receipt changes on-chain state: monotonic ledger, then `SETTLED` | [`NidhiDispatcher._ccipReceive` L178](src/NidhiDispatcher.sol#L178) |
-| Defensive receiver: failed payouts are HELD, not reverted; DAO `recover`; decoupled ACK | [`_ccipReceive` L113](src/DestinationReceiver.sol#L113), [`recover` L173](src/DestinationReceiver.sol#L173), [`_ack` L191](src/DestinationReceiver.sol#L191) |
-| **Automation**: queue of grants needing work; `checkUpkeep` and `performUpkeep` retry ACKs and held payouts | [`checkUpkeep` L256](src/DestinationReceiver.sol#L256), [`performUpkeep` L270](src/DestinationReceiver.sol#L270), [`09_RegisterUpkeep`](script/09_RegisterUpkeep.s.sol) (registrar 2.3) |
+| Programmable token transfer (token + grant payload), LINK or native fees | [`dispatch` L120](src/NidhiDispatcher.sol#L120), [`ccipSend` L147](src/NidhiDispatcher.sol#L147) |
+| ACK receipt changes on-chain state: monotonic ledger, then `SETTLED` | [`NidhiDispatcher._ccipReceive` L182](src/NidhiDispatcher.sol#L182) |
+| Defensive receiver: failed payouts are HELD, not reverted; DAO `recover`; decoupled ACK | [`_ccipReceive` L119](src/DestinationReceiver.sol#L119), [`recover` L180](src/DestinationReceiver.sol#L180), [`_ack` L198](src/DestinationReceiver.sol#L198) |
+| **Automation**: queue of grants needing work; `checkUpkeep` and `performUpkeep` retry ACKs and held payouts | [`checkUpkeep` L263](src/DestinationReceiver.sol#L263), [`performUpkeep` L277](src/DestinationReceiver.sol#L277), [`09_RegisterUpkeep`](legacy/sepolia-v3/09_RegisterUpkeep.s.sol) (registrar 2.3) |
 | `extraArgs` encoding isolated in one place | [`ExtraArgsLib.encode` L10](src/libraries/ExtraArgsLib.sol#L10) |
 
 ### ENSv2: identities, permissions and discovery (Sepolia, live contracts)
 | What | Where |
 |---|---|
-| **Roles:** approver, auditor and guardian are EAC `ROLE_SET_TEXT` on `keccak256(key)`, read through the DAO name's current resolver | [`isAuthorized` L84](src/ENSv2Authority.sol#L84), [`resourceOf` L76](src/ENSv2Authority.sol#L76) |
-| **Pay a name, not an address:** `alice.nidhi-dao.eth` resolves through registry → subregistry → resolver → `addr(node, ENSIP-11 Base coin type)` | [`resolveGrantee` L95](src/ENSv2Authority.sol#L95), [`06_EnsSubnames`](script/06_EnsSubnames.s.sol) |
-| **Guardian kill-switch** and **approver cancellation**, gated by ENS roles | [`setPaused` L152](src/NidhiHook.sol#L152), [`cancelGrant` L160](src/NidhiHook.sol#L160) |
-| **AI agent identity:** `auditor.nidhi-dao.eth`, which may write only its `nidhi.attestation` text record | [`06_EnsSubnames`](script/06_EnsSubnames.s.sol), [`audit.ts --publish`](offchain/src/audit.ts) |
-| **No hard-coded addresses:** contract records on `nidhi-dao.eth` power the dashboard | [`_ensRecords`](script/02_DeploySource.s.sol), [`docs/index.html`](docs/index.html) |
+| **Roles:** approver, auditor and guardian are EAC `ROLE_SET_TEXT` on `keccak256(key)`, read through the DAO name's current resolver | [`isAuthorized` L94](src/ENSv2Authority.sol#L94), [`resourceOf` L86](src/ENSv2Authority.sol#L86) |
+| **Pay a name, not an address:** `alice.nidhi-dao.eth` resolves through registry → subregistry → resolver → `addr(node, ENSIP-11 Base coin type)` | [`resolveGrantee` L105](src/ENSv2Authority.sol#L105), [`06_EnsSubnames`](legacy/sepolia-v3/06_EnsSubnames.s.sol) |
+| **Guardian kill-switch** and **approver cancellation**, gated by ENS roles | [`setPaused` L200](src/NidhiHook.sol#L200), [`cancelGrant` L208](src/NidhiHook.sol#L208) |
+| **AI agent identity:** `auditor.nidhi-dao.eth`, which may write only its `nidhi.attestation` text record | [`06_EnsSubnames`](legacy/sepolia-v3/06_EnsSubnames.s.sol), [`audit.ts --publish`](offchain/src/audit.ts) |
+| **No hard-coded addresses:** contract records on `nidhi-dao.eth` powered the v3 dashboard | [`_ensRecords`](legacy/sepolia-v3/02_DeploySource.s.sol), [`docs/legacy/index.html`](docs/legacy/index.html) |
 | Fails closed: an expired DAO name, an expired subname or a broken resolver means no payout | [`V3Features.t.sol`](test/unit/V3Features.t.sol), [`LiveSepolia.t.sol`](test/fork/LiveSepolia.t.sol) |
 
 ## What makes it hold up
@@ -97,7 +115,7 @@ Every address below is also published as an ENS text record on `nidhi-dao.eth` (
 - **Modern signers.** It accepts EOAs, **EIP-7702-delegated EOAs** (OpenZeppelin `SignatureChecker` alone rejects them; found by the live-fork tests) and ERC-1271 smart wallets.
 - **The AI is accountable but not trusted.** A deterministic rubric over SHA-pinned GitHub evidence decides, and a **multi-model jury** (Groq, Gemini, Cerebras, optional Claude) can only veto. Amounts come from the DAO's pre-committed grant table. CI re-verifies a committed audit from scratch. `nidhi-002` (merged without an approving review) was correctly **rejected**.
 
-## Tests: 97 passing
+## Tests: 114 passing (unit, fuzz, invariant) plus fork suites
 ```
 forge test                        # unit + fuzz + invariant + live Sepolia fork (fork suites need SEPOLIA_RPC_URL)
 forge coverage --no-match-contract "LiveSepolia|Spike|DrainCheck"
@@ -122,20 +140,19 @@ git clone --recursive https://github.com/neevmodh/nidhi && cd nidhi
 forge build && forge test
 
 cd offchain && npm ci
-node src/audit.ts nidhi-003 --publish   # rubric + LLM jury → signed attestation (+ ENS record)
-node src/verify.ts                      # anyone can re-verify
+node src/audit.ts nidhi-001            # rubric + LLM jury → signed attestation
+node src/verify.ts                     # anyone can re-verify
+node src/testnets.ts                   # regenerate chains/testnets.json (on-chain checks)
 cd ..
 
-forge script script/00_EnsCommit.s.sol    --rpc-url sepolia      --broadcast   # ENSv2 resolver + roles + commit
-forge script script/01_EnsRegister.s.sol  --rpc-url sepolia      --broadcast   # register nidhi-dao.eth (after 60s)
-forge script script/02_DeploySource.s.sol --rpc-url sepolia      --broadcast   # hook, router, dispatcher, pool NFT, ENS records
-forge script script/06_EnsSubnames.s.sol  --rpc-url sepolia      --broadcast   # alice.nidhi-dao.eth, auditor.nidhi-dao.eth
-forge script script/03_DeployDest.s.sol   --rpc-url base_sepolia --broadcast   # receiver + ACK fee reserve
-forge script script/04_WireSource.s.sol   --rpc-url sepolia      --broadcast   # dispatcher → receiver (+ ENS record)
-forge script script/09_RegisterUpkeep.s.sol --rpc-url base_sepolia --broadcast # Chainlink Automation upkeep
-forge script script/05_Demo.s.sol         --rpc-url sepolia      --broadcast   # pay an audited grant
-forge script script/07_LiveScenarios.s.sol --rpc-url sepolia --broadcast --sig "pause()"   # | unpause revoke regrant tamper cancel batch
+# deploy, per chain (REGISTRY=chains/testnets.json for testnets; mainnets use chains/registry.json)
+forge script script/mainnet/Deploy.s.sol   --rpc-url <chain> --broadcast --slow   # stack, mined hook, pool, LP NFT
+forge script script/mainnet/Wire.s.sol     --rpc-url <chain> --broadcast --slow   # add-only CCIP routes
+forge script script/mainnet/Handover.s.sol --rpc-url <chain> --broadcast --slow   # Ownable2Step to the DAO admin
+DEST_CHAIN=421614 forge script script/mainnet/LiveGrant.s.sol --rpc-url <chain> --broadcast   # send one grant
+
+cd ui && npm ci && npm run dev           # the app, reading the live deployment
 ```
-The full pipeline was rehearsed on local forks of both chains before every live deployment. `08_Migrate` retired v2 and recovered all of its liquidity, LINK and ETH.
+Every deploy was rehearsed on anvil forks first (`offchain/rehearse-all.sh` for mainnets).
 
 More detail: [ARCHITECTURE.md](ARCHITECTURE.md), [SECURITY.md](SECURITY.md), [DEMO.md](DEMO.md), [FEEDBACK.md](FEEDBACK.md).
