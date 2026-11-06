@@ -1,0 +1,47 @@
+{
+  "id": "m2",
+  "spec": {
+    "title": "Improve the Milestones screen",
+    "repo": "neevmodh/nidhi",
+    "rfp": "rfp/m2.md",
+    "grantee": "bob",
+    "payTo": 421614,
+    "amountInWei": "300000000000000",
+    "requiredPathGlobs": [
+      "ui/src/**"
+    ],
+    "rules": {
+      "requireMerged": true,
+      "minApprovals": 1,
+      "requireNoFailedChecks": true,
+      "requiredPathGlobs": [
+        "ui/src/**"
+      ],
+      "maxFilesChanged": 60
+    },
+    "note": "Standard rules: merged, one approving review, CI green. Paid to bob.nidhi-dao.eth on Arbitrum Sepolia."
+  },
+  "specHash": "0x4a6721b87e2a9a94fd31f90a319a7255a8da12d23d60076e18d7e13a4a47e6e6",
+  "quoteAtCommit": "285326992199004892n",
+  "mandate": {
+    "grantId": "0xb53c1854c2d40efbb673f2ade96889cafad3a4a28e27429d15530f0370275e8a",
+    "executor": "0x410b6334F7804Ed55e8a1E00D84f6A4a216dB36E",
+    "recipient": "0x9f755B63405C90B9008b2c6162b1d5Bac6C6b9C7",
+    "tokenIn": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    "tokenOut": "0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05",
+    "amountIn": "300000000000000n",
+    "minOut": "142663496099502446n",
+    "maxOut": "427990488298507338n",
+    "destChainSelector": "3478487238524512106n",
+    "destReceiver": "0xa08D0621872539A8b5c0DB986BDb7367833aA6cA",
+    "evidenceHash": "0x4a6721b87e2a9a94fd31f90a319a7255a8da12d23d60076e18d7e13a4a47e6e6",
+    "deadline": "1796530160n",
+    "poolId": "0xca3618345392a1baca6b2d106b3ad9c7e98e8c31df872373893fe83abc6691bc",
+    "recipientLabelHash": "0x38e47a7b719dce63662aeaf43440326f551b8a7ee198cee35cb5d517f2d296a2"
+  },
+  "approver": "0xcb83DbB16c6C5700B59c94184E1eFe21bAFb972D",
+  "approverSig": "0xd8a3f0078af0693997dfd402b7e18ca9cdf2152d4dd529421590ef21c20693ce6f219c8d393ba8d22092292b60257ebc7955f07d7e3343828ca12a22d64cce021c",
+  "hook": "0x88257DA3a88Aaaf8b3EEF52112Bfb9C3596580c4",
+  "chainId": 11155111,
+  "committedAt": "2026-11-06T04:09:20.175Z"
+}

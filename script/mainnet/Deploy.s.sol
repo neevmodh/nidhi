@@ -101,19 +101,34 @@ contract Deploy is Script {
     function run() external {
         string memory json = vm.readFile(vm.envOr("REGISTRY", string("chains/registry.json")));
         Ctx memory c = _ctx(json);
-        require(vm.parseJsonBool(json, _p(c, ".capabilities.source")), "chain is not source-capable (see registry excludedBecause)");
-        require(!IRmnLike(ICcipArm(c.ccipRouter).getArmProxy()).isCursed(), "CCIP RMN is cursed on this chain right now: refusing to deploy a sender");
+        require(
+            vm.parseJsonBool(json, _p(c, ".capabilities.source")),
+            "chain is not source-capable (see registry excludedBecause)"
+        );
+        require(
+            !IRmnLike(ICcipArm(c.ccipRouter).getArmProxy()).isCursed(),
+            "CCIP RMN is cursed on this chain right now: refusing to deploy a sender"
+        );
         require(CREATE2_DEPLOYER.code.length > 0, "CREATE2 deployer missing on this chain");
 
         uint256 pk = vm.envUint("MAINNET_DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
         address admin = vm.envAddress("MAINNET_ADMIN");
-        require(admin != address(0) && admin != deployer, "set MAINNET_ADMIN to the DAO admin (wallet or Safe), not the deployer");
-        uint256 seedUsdc = vm.envOr(c.hasRef ? "SEED_USD" : "SEED_TOKENS", c.hasRef ? uint256(20) : uint256(3)) * 10 ** c.payoutDecimals;
-        require(IERC20Min(c.payout).balanceOf(deployer) >= seedUsdc, "deployer lacks the payout-token seed on this chain");
+        require(
+            admin != address(0) && admin != deployer,
+            "set MAINNET_ADMIN to the DAO admin (wallet or Safe), not the deployer"
+        );
+        uint256 seedUsdc = vm.envOr(c.hasRef ? "SEED_USD" : "SEED_TOKENS", c.hasRef ? uint256(20) : uint256(3)) * 10
+            ** c.payoutDecimals;
+        require(
+            IERC20Min(c.payout).balanceOf(deployer) >= seedUsdc, "deployer lacks the payout-token seed on this chain"
+        );
 
         (uint256 reserve, uint256 capBase) = _economics(c);
-        require(deployer.balance > reserve * 2, "deployer native balance too low for fee reserves + gas (run offchain preflight)");
+        require(
+            deployer.balance > reserve * 2,
+            "deployer native balance too low for fee reserves + gas (run offchain preflight)"
+        );
 
         Out memory o;
         vm.startBroadcast(pk);
@@ -154,7 +169,9 @@ contract Deploy is Script {
         c.poolManager = vm.parseJsonAddress(json, _p(c, ".uniswap.poolManager"));
         c.positionManager = vm.parseJsonAddress(json, _p(c, ".uniswap.positionManager"));
         c.quoter = vm.parseJsonAddress(json, _p(c, ".uniswap.quoter"));
-        if (vm.keyExistsJson(json, _p(c, ".uniswap.stateView"))) c.stateView = vm.parseJsonAddress(json, _p(c, ".uniswap.stateView"));
+        if (vm.keyExistsJson(json, _p(c, ".uniswap.stateView"))) {
+            c.stateView = vm.parseJsonAddress(json, _p(c, ".uniswap.stateView"));
+        }
         c.payout = vm.parseJsonAddress(json, _p(c, ".payoutToken.address"));
         c.base = vm.parseJsonAddress(json, _p(c, ".wrappedNative.address"));
         c.ccipRouter = vm.parseJsonAddress(json, _p(c, ".ccip.router"));
@@ -202,7 +219,8 @@ contract Deploy is Script {
         if (!c.hasRef) return (reserve, vm.envOr("DAILY_CAP_WEI", uint256(0.001 ether))); // testnet: fixed cap in base wei
         (uint160 refSqrt,,,) = IStateViewLike(c.stateView).getSlot0(c.refPoolId);
         uint256 p96 = FullMath.mulDiv(refSqrt, refSqrt, 1 << 96);
-        uint256 usdcPerBase = c.refBaseIsCurrency0 ? FullMath.mulDiv(p96, 1e18, 1 << 96) : FullMath.mulDiv(1e18, 1 << 96, p96); // 1e18-scaled
+        uint256 usdcPerBase =
+            c.refBaseIsCurrency0 ? FullMath.mulDiv(p96, 1e18, 1 << 96) : FullMath.mulDiv(1e18, 1 << 96, p96); // 1e18-scaled
         uint256 capUsdRaw = vm.envOr("DAILY_CAP_USD", uint256(100)) * 1e6;
         capBase = FullMath.mulDiv(capUsdRaw, 1e18, usdcPerBase);
         require(capBase > 0, "cap rounded to zero");
@@ -309,9 +327,11 @@ contract Deploy is Script {
         returns (uint256 positionId)
     {
         IERC20Min(c.payout).approve(PERMIT2, type(uint256).max);
-        IAllowanceTransfer(PERMIT2).approve(c.payout, c.positionManager, type(uint160).max, uint48(block.timestamp + 1 hours));
+        IAllowanceTransfer(PERMIT2)
+            .approve(c.payout, c.positionManager, type(uint160).max, uint48(block.timestamp + 1 hours));
         positionId = IPositionManager(c.positionManager).nextTokenId();
-        IPositionManager(c.positionManager).modifyLiquidities(_mintCall(c, key, sqrtP, deployer, seedUsdc), block.timestamp + 300);
+        IPositionManager(c.positionManager)
+            .modifyLiquidities(_mintCall(c, key, sqrtP, deployer, seedUsdc), block.timestamp + 300);
         // On a busy PositionManager someone can mint between our read and our mint, so confirm which id is ours.
         for (uint256 i; i < 8; ++i) {
             if (IERC721Min(c.positionManager).ownerOf(positionId + i) == deployer) return positionId + i;
@@ -327,7 +347,8 @@ contract Deploy is Script {
         (int24 lower, int24 upper, uint128 liq) = _liquidity(c.base < c.payout, sqrtP, seedUsdc);
         bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
         bytes[] memory params = new bytes[](2);
-        params[0] = abi.encode(key, lower, upper, uint256(liq), type(uint128).max, type(uint128).max, deployer, bytes(""));
+        params[0] =
+            abi.encode(key, lower, upper, uint256(liq), type(uint128).max, type(uint128).max, deployer, bytes(""));
         params[1] = abi.encode(key.currency0, key.currency1);
         return abi.encode(actions, params);
     }

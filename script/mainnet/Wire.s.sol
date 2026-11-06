@@ -67,12 +67,16 @@ contract Wire is Script {
     }
 
     function _selector(string memory reg, uint256 id) internal pure returns (uint64) {
-        return uint64(vm.parseUint(vm.parseJsonString(reg, string.concat(".chains.", vm.toString(id), ".ccip.selector"))));
+        return
+            uint64(vm.parseUint(vm.parseJsonString(reg, string.concat(".chains.", vm.toString(id), ".ccip.selector"))));
     }
 
     function _pays(string memory reg, uint256 from, uint256 to) internal pure returns (bool) {
-        uint256[] memory lanes = vm.parseJsonUintArray(reg, string.concat(".chains.", vm.toString(from), ".payoutLanes"));
-        for (uint256 i; i < lanes.length; ++i) if (lanes[i] == to) return true;
+        uint256[] memory lanes =
+            vm.parseJsonUintArray(reg, string.concat(".chains.", vm.toString(from), ".payoutLanes"));
+        for (uint256 i; i < lanes.length; ++i) {
+            if (lanes[i] == to) return true;
+        }
         return false;
     }
 }

@@ -65,7 +65,9 @@ contract NidhiHopRelay is CCIPReceiver, Ownable2Step {
     event OnwardSet(uint64 indexed selector, address receiver);
     event UpstreamAdded(uint64 indexed selector, address dispatcher);
     event TokenAllowed(address indexed token);
-    event HopReceived(bytes32 indexed grantId, bytes32 indexed inboundMessageId, uint64 upstreamSelector, uint256 amount);
+    event HopReceived(
+        bytes32 indexed grantId, bytes32 indexed inboundMessageId, uint64 upstreamSelector, uint256 amount
+    );
     event HopForwarded(bytes32 indexed grantId, bytes32 indexed onwardMessageId, uint64 onwardSelector, uint256 fee);
     event HopForwardFailed(bytes32 indexed grantId, bytes reason);
     event HopAckRelayed(bytes32 indexed grantId, bytes32 indexed ackMessageId, uint8 outcome);
@@ -154,8 +156,11 @@ contract NidhiHopRelay is CCIPReceiver, Ownable2Step {
         if (h.status == HopStatus.NONE) revert UnknownGrant(grantId);
         if (amount != h.amount) revert BadAck(grantId);
         // The ACK can land before our own send returned (synchronous delivery): adopt its id, else it must match.
-        if (h.onwardMessageId == bytes32(0) && h.status == HopStatus.FORWARD_PENDING) h.onwardMessageId = onwardMessageId;
-        else if (onwardMessageId != h.onwardMessageId) revert BadAck(grantId);
+        if (h.onwardMessageId == bytes32(0) && h.status == HopStatus.FORWARD_PENDING) {
+            h.onwardMessageId = onwardMessageId;
+        } else if (onwardMessageId != h.onwardMessageId) {
+            revert BadAck(grantId);
+        }
         h.outcome = outcome; // HELD then later PAID/RECOVERED: each ACK is relayed; the dispatcher keeps it monotonic
         h.status = HopStatus.ACK_PENDING;
         _relayAck(grantId);

@@ -1,0 +1,28 @@
+{
+  "description": "Milestone grants on the Nidhi repo itself. The DAO approver pre-signs a mandate for each milestone spec (scripts: node src/milestone.ts commit <id>). A developer opens a PR whose title contains the milestone tag, e.g. \"[m1] ...\". When it is merged and passes the rubric, the agent (node src/agent.ts, or the agent GitHub Action) signs its attestation and sends the payout itself.",
+  "source": { "chainId": 11155111, "stack": "ens" },
+  "milestones": {
+    "m1": {
+      "title": "Document the milestone agent",
+      "repo": "neevmodh/nidhi",
+      "rfp": "rfp/m1.md",
+      "grantee": "alice",
+      "payTo": 84532,
+      "amountInWei": "300000000000000",
+      "requiredPathGlobs": ["docs/**"],
+      "rules": { "minApprovals": 0 },
+      "note": "Demo milestone: no approving review required, so one person can run the whole demo."
+    },
+    "m2": {
+      "title": "Improve the Milestones screen",
+      "repo": "neevmodh/nidhi",
+      "rfp": "rfp/m2.md",
+      "grantee": "bob",
+      "payTo": 421614,
+      "amountInWei": "300000000000000",
+      "requiredPathGlobs": ["ui/src/**"],
+      "rules": {},
+      "note": "Standard rules: merged, one approving review, CI green. Paid to bob.nidhi-dao.eth on Arbitrum Sepolia."
+    }
+  }
+}

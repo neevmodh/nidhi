@@ -2,7 +2,12 @@
 pragma solidity ^0.8.26;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {IVerifiableFactory, IPermissionedResolver, IUserRegistry, IETHRegistryV2} from "../../test/interfaces/IENSv2.sol";
+import {
+    IVerifiableFactory,
+    IPermissionedResolver,
+    IUserRegistry,
+    IETHRegistryV2
+} from "../../test/interfaces/IENSv2.sol";
 import {ENSv2Authority, IENSv2Registry} from "../../src/ENSv2Authority.sol";
 
 interface IEACRoot {
@@ -100,12 +105,15 @@ contract EnsSetup is Script {
     function _ownResolver(address dao, address owner, string memory label) internal returns (address) {
         IPermissionedResolver.Grant[] memory g = new IPermissionedResolver.Grant[](2);
         g[0] = IPermissionedResolver.Grant(dao, ROLE_SET_ADDRESS | (ROLE_SET_ADDRESS << ADMIN));
-        g[1] = IPermissionedResolver.Grant(owner, ROLE_SET_ADDRESS | (ROLE_SET_ADDRESS << ADMIN) | ROLE_SET_TEXT | (ROLE_SET_TEXT << ADMIN));
-        return IVerifiableFactory(ENS_VERIFIABLE_FACTORY).deployProxy(
-            ENS_RESOLVER_IMPL,
-            uint256(keccak256(abi.encode("nidhi.grantee.bob", label, owner))),
-            abi.encodeCall(IPermissionedResolver.initialize, (g, new bytes[](0)))
+        g[1] = IPermissionedResolver.Grant(
+            owner, ROLE_SET_ADDRESS | (ROLE_SET_ADDRESS << ADMIN) | ROLE_SET_TEXT | (ROLE_SET_TEXT << ADMIN)
         );
+        return IVerifiableFactory(ENS_VERIFIABLE_FACTORY)
+            .deployProxy(
+                ENS_RESOLVER_IMPL,
+                uint256(keccak256(abi.encode("nidhi.grantee.bob", label, owner))),
+                abi.encodeCall(IPermissionedResolver.initialize, (g, new bytes[](0)))
+            );
     }
 
     /// DNS wire format of "<sub>.<label>.eth"

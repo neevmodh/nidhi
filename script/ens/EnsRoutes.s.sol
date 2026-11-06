@@ -50,7 +50,9 @@ contract EnsRoutes is Script {
     }
 
     function _add(address dispatcher, uint64 sel, uint256 id) internal {
-        address rx = vm.parseJsonAddress(vm.readFile(string.concat("deployments/ens-v4-receiver-", vm.toString(id), ".json")), ".receiver");
+        address rx = vm.parseJsonAddress(
+            vm.readFile(string.concat("deployments/ens-v4-receiver-", vm.toString(id), ".json")), ".receiver"
+        );
         if (NidhiDispatcher(payable(dispatcher)).destReceivers(sel) == address(0)) {
             NidhiDispatcher(payable(dispatcher)).addDestination(sel, rx);
             console2.log("route added to", id);

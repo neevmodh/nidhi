@@ -127,7 +127,9 @@ contract MainnetForkTest is Test {
     function _reason(bytes memory e) internal pure returns (string memory) {
         if (e.length >= 4 && bytes4(e) == 0x08c379a0) {
             bytes memory body = new bytes(e.length - 4);
-            for (uint256 i; i < body.length; ++i) body[i] = e[i + 4];
+            for (uint256 i; i < body.length; ++i) {
+                body[i] = e[i + 4];
+            }
             return abi.decode(body, (string));
         }
         return vm.toString(e);
@@ -137,7 +139,9 @@ contract MainnetForkTest is Test {
     function rehearse(uint256 chainId) external {
         string memory json = vm.readFile("chains/registry.json");
         Ctx memory c = _ctx(json, chainId);
-        vm.createSelectFork(vm.envOr(string.concat("FORK_RPC_", vm.toString(chainId)), vm.parseJsonString(json, _j(c, ".rpc"))));
+        vm.createSelectFork(
+            vm.envOr(string.concat("FORK_RPC_", vm.toString(chainId)), vm.parseJsonString(json, _j(c, ".rpc")))
+        );
         require(block.chainid == chainId, "wrong chain");
         // Chainlink's Risk Management Network can curse a chain (all CCIP sends revert with BadARMSignal). That is a live
         // network condition, not a Nidhi bug: report it as SKIPPED instead of failing.
@@ -247,7 +251,8 @@ contract MainnetForkTest is Test {
         (uint160 refSqrt,,,) = IStateViewLike(c.stateView).getSlot0(c.refPoolId);
         bool baseIs0 = c.base < c.usdc;
         // reference price orientation vs ours
-        uint160 sqrtP = (baseIs0 == c.refBaseIsCurrency0) ? refSqrt : uint160(FullMath.mulDiv(1 << 96, 1 << 96, refSqrt));
+        uint160 sqrtP =
+            (baseIs0 == c.refBaseIsCurrency0) ? refSqrt : uint160(FullMath.mulDiv(1 << 96, 1 << 96, refSqrt));
         (address t0, address t1) = baseIs0 ? (c.base, c.usdc) : (c.usdc, c.base);
         poolKey = PoolKey(Currency.wrap(t0), Currency.wrap(t1), 3000, 60, IHooks(address(hook)));
         IPoolManager(c.poolManager).initialize(poolKey, sqrtP);
@@ -260,14 +265,23 @@ contract MainnetForkTest is Test {
         for (uint256 i; i < 2; ++i) {
             address t = i == 0 ? c.base : c.usdc;
             IERC20Lite(t).approve(PERMIT2, type(uint256).max);
-            IAllowanceTransfer(PERMIT2).approve(t, c.positionManager, type(uint160).max, uint48(block.timestamp + 1 hours));
+            IAllowanceTransfer(PERMIT2)
+                .approve(t, c.positionManager, type(uint160).max, uint48(block.timestamp + 1 hours));
         }
         int24 lower = TickMath.minUsableTick(60);
         int24 upper = TickMath.maxUsableTick(60);
-        uint128 liq = LiquidityAmounts.getLiquidityForAmounts(sqrtP, TickMath.getSqrtPriceAtTick(lower), TickMath.getSqrtPriceAtTick(upper), baseIs0 ? 200 ether : 1_000_000e6, baseIs0 ? 1_000_000e6 : 200 ether);
+        uint128 liq = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtP,
+            TickMath.getSqrtPriceAtTick(lower),
+            TickMath.getSqrtPriceAtTick(upper),
+            baseIs0 ? 200 ether : 1_000_000e6,
+            baseIs0 ? 1_000_000e6 : 200 ether
+        );
         bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
         bytes[] memory params = new bytes[](2);
-        params[0] = abi.encode(poolKey, lower, upper, uint256(liq), type(uint128).max, type(uint128).max, address(this), bytes(""));
+        params[0] = abi.encode(
+            poolKey, lower, upper, uint256(liq), type(uint128).max, type(uint128).max, address(this), bytes("")
+        );
         params[1] = abi.encode(poolKey.currency0, poolKey.currency1);
         IPositionManager(c.positionManager).modifyLiquidities(abi.encode(actions, params), block.timestamp + 300);
     }
@@ -275,9 +289,12 @@ contract MainnetForkTest is Test {
     // ------------------------------------------------------------------------------------------ grant
 
     function _quote(Ctx memory c, uint128 amountIn) internal returns (uint256 out) {
-        (out,) = IV4Quoter(c.quoter).quoteExactInputSingle(
-            IV4Quoter.QuoteExactSingleParams({poolKey: poolKey, zeroForOne: c.base < c.usdc, exactAmount: amountIn, hookData: ""})
-        );
+        (out,) = IV4Quoter(c.quoter)
+            .quoteExactInputSingle(
+                IV4Quoter.QuoteExactSingleParams({
+                    poolKey: poolKey, zeroForOne: c.base < c.usdc, exactAmount: amountIn, hookData: ""
+                })
+            );
     }
 
     function _mandate(Ctx memory c, bytes32 grantId, uint256 out) internal view returns (Mandate memory) {
@@ -300,7 +317,8 @@ contract MainnetForkTest is Test {
     }
 
     function _hookData(Mandate memory m) internal view returns (bytes memory) {
-        Attestation memory a = Attestation(m.grantId, m.evidenceHash, keccak256("in"), keccak256("rubric"), uint64(block.timestamp));
+        Attestation memory a =
+            Attestation(m.grantId, m.evidenceHash, keccak256("in"), keccak256("rubric"), uint64(block.timestamp));
         (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(APPROVER_PK, hook.mandateDigest(m));
         (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(AUDITOR_PK, hook.attestationDigest(a));
         return abi.encode(
@@ -327,7 +345,16 @@ contract MainnetForkTest is Test {
         vm.startPrank(executor);
         IWrapped(c.base).deposit{value: 1 ether}();
         IERC20Lite(c.base).approve(address(router), type(uint256).max);
-        router.swap(poolKey, SwapParams(c.base < c.usdc, -int256(uint256(GRANT_BASE_IN)), c.base < c.usdc ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1), hd, block.timestamp + 300);
+        router.swap(
+            poolKey,
+            SwapParams(
+                c.base < c.usdc,
+                -int256(uint256(GRANT_BASE_IN)),
+                c.base < c.usdc ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+            ),
+            hd,
+            block.timestamp + 300
+        );
         vm.stopPrank();
     }
 
@@ -350,7 +377,8 @@ contract MainnetForkTest is Test {
         );
         bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
         bytes[] memory params = new bytes[](2);
-        params[0] = abi.encode(k, lower, upper, uint256(liq), type(uint128).max, type(uint128).max, address(this), bytes(""));
+        params[0] =
+            abi.encode(k, lower, upper, uint256(liq), type(uint128).max, type(uint128).max, address(this), bytes(""));
         params[1] = abi.encode(k.currency0, k.currency1);
         IPositionManager(c.positionManager).modifyLiquidities(abi.encode(actions, params), block.timestamp + 300);
     }
@@ -382,7 +410,11 @@ contract MainnetForkTest is Test {
         vm.prank(executor);
         try router.swap(
             poolKey,
-            SwapParams(baseIs0, -int256(uint256(GRANT_BASE_IN)), baseIs0 ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1),
+            SwapParams(
+                baseIs0,
+                -int256(uint256(GRANT_BASE_IN)),
+                baseIs0 ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+            ),
             hd,
             block.timestamp + 300
         ) {
@@ -395,7 +427,9 @@ contract MainnetForkTest is Test {
     function _hookReason(bytes memory err) internal pure returns (bytes4) {
         if (err.length < 4) return bytes4(0);
         bytes memory body = new bytes(err.length - 4);
-        for (uint256 i; i < body.length; ++i) body[i] = err[i + 4];
+        for (uint256 i; i < body.length; ++i) {
+            body[i] = err[i + 4];
+        }
         (,, bytes memory reason,) = abi.decode(body, (address, bytes4, bytes, bytes));
         return bytes4(reason);
     }

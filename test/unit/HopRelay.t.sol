@@ -93,7 +93,9 @@ contract HopRelayTest is Test {
         receiver.setPayoutsPaused(true);
         bytes32 id = keccak256("hop-held");
         _send(id);
-        assertEq(uint8(dispatcher.statusOf(id)), uint8(NidhiDispatcher.Status.HELD), "HELD travels back through the relay");
+        assertEq(
+            uint8(dispatcher.statusOf(id)), uint8(NidhiDispatcher.Status.HELD), "HELD travels back through the relay"
+        );
         assertEq(bnm.balanceOf(grantee), 0);
 
         vm.prank(dao);

@@ -56,15 +56,21 @@ contract HopRoute is Script {
         } else if (_eq(step, "onward")) {
             require(block.chainid == viaId, "run STEP=onward on the via chain");
             NidhiHopRelay relay = NidhiHopRelay(payable(relayAddr));
-            if (relay.onwardReceiver() == address(0)) relay.setOnward(_sel(reg, finalId), vm.parseJsonAddress(route, ".finalReceiver"));
+            if (relay.onwardReceiver() == address(0)) {
+                relay.setOnward(_sel(reg, finalId), vm.parseJsonAddress(route, ".finalReceiver"));
+            }
             vm.stopBroadcast();
             console2.log("relay forwards to", relay.onwardReceiver());
         } else if (_eq(step, "source")) {
             require(block.chainid == sourceId, "run STEP=source on the source chain");
             uint64 via = _sel(reg, viaId);
-            if (NidhiDispatcher(payable(dispatcher)).destReceivers(via) == address(0)) NidhiDispatcher(payable(dispatcher)).addDestination(via, relayAddr);
+            if (NidhiDispatcher(payable(dispatcher)).destReceivers(via) == address(0)) {
+                NidhiDispatcher(payable(dispatcher)).addDestination(via, relayAddr);
+            }
             // the relay forwards with a ccipSend inside try/catch on delivery: 600k is not enough for CCIP 2.0 onramps
-            if (NidhiDispatcher(payable(dispatcher)).destGasLimit() < 2_000_000) NidhiDispatcher(payable(dispatcher)).setDestGasLimit(2_000_000);
+            if (NidhiDispatcher(payable(dispatcher)).destGasLimit() < 2_000_000) {
+                NidhiDispatcher(payable(dispatcher)).setDestGasLimit(2_000_000);
+            }
             vm.stopBroadcast();
             console2.log("source routes via the relay", relayAddr);
         } else {
@@ -91,7 +97,8 @@ contract HopRoute is Script {
     }
 
     function _sel(string memory reg, uint256 id) internal pure returns (uint64) {
-        return uint64(vm.parseUint(vm.parseJsonString(reg, string.concat(".chains.", vm.toString(id), ".ccip.selector"))));
+        return
+            uint64(vm.parseUint(vm.parseJsonString(reg, string.concat(".chains.", vm.toString(id), ".ccip.selector"))));
     }
 
     function _eq(string memory a, string memory b) internal pure returns (bool) {

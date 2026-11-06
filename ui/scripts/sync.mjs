@@ -88,6 +88,32 @@ for (const f of fs.readdirSync(path.join(repo, "deployments"))) {
     if (deployments[String(route.source)]) deployments[String(route.source)].hop = { stack, route };
   }
 }
+// ---- milestone grants: the DAO's milestone specs and the mandates its approver pre-signed (public by design)
+{
+  const mf = path.join(repo, "offchain", "milestones.json");
+  const out = { source: null, milestones: {} };
+  if (fs.existsSync(mf)) {
+    const file = readJson(mf);
+    out.source = file.source;
+    for (const [id, m] of Object.entries(file.milestones)) {
+      const md = path.join(repo, "offchain", "mandates", `${id}.json`);
+      const rfp = path.join(repo, "offchain", m.rfp);
+      const mandate = fs.existsSync(md) ? readJson(md) : null;
+      out.milestones[id] = {
+        ...m,
+        rfpText: fs.existsSync(rfp) ? fs.readFileSync(rfp, "utf8") : "",
+        committed: Boolean(mandate),
+        specHash: mandate?.specHash ?? null,
+        grantId: mandate?.mandate?.grantId ?? null,
+        approver: mandate?.approver ?? null,
+        committedAt: mandate?.committedAt ?? null,
+        deadline: mandate ? Number(String(mandate.mandate.deadline).replace(/n$/, "")) : null,
+        rules: mandate?.spec?.rules ?? m.rules,
+      };
+    }
+  }
+  write("milestones.json", out);
+}
 write("deployments.json", deployments);
 
 // ---- audit evidence (latest run), if present

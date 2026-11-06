@@ -118,7 +118,9 @@ abstract contract NidhiBase is Test, Deployers {
         );
         deployCodeTo(
             "NidhiHook.sol:NidhiHook",
-            abi.encode(manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP, address(quoter), _guard()),
+            abi.encode(
+                manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP, address(quoter), _guard()
+            ),
             hookAddr
         );
         hook = NidhiHook(hookAddr);

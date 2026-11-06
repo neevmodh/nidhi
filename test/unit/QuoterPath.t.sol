@@ -68,7 +68,9 @@ contract QuoterPathTest is NidhiBase {
         );
         deployCodeTo(
             "NidhiHook.sol:NidhiHook",
-            abi.encode(manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP, address(0), _noGuard()),
+            abi.encode(
+                manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP, address(0), _noGuard()
+            ),
             hookAddr
         );
         assertEq(NidhiHook(hookAddr).quoter(), address(0));

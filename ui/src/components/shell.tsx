@@ -73,6 +73,7 @@ export function GradeToggle() {
 
 const NAV = [
   ["/app", "Overview"],
+  ["/app/milestones", "Milestones"],
   ["/app/grants", "Grants"],
   ["/app/network", "Network"],
   ["/app/pool", "Pool"],

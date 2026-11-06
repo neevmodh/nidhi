@@ -63,6 +63,7 @@ contract NidhiHook is BaseHook, EIP712 {
     address public immutable owner;
     /// @notice Rolling safety cap: max total `amountIn` the hook will authorize per UTC day.
     uint256 public immutable maxAmountInPerDay;
+
     /// @notice Reference-price guard (Uniswap StateView): the achieved rate must stay within `maxDeviationBps` of the
     ///         canonical deep v4 pool for the same pair. Blunts thin-pool skew and sandwiching without a trusted oracle.
     ///         stateView == address(0) disables the guard.
@@ -154,7 +155,10 @@ contract NidhiHook is BaseHook, EIP712 {
         owner = owner_;
         maxAmountInPerDay = maxAmountInPerDay_;
         quoter = quoter_;
-        if (guard_.stateView != address(0) && (guard_.baseToken == address(0) || guard_.payoutToken == address(0) || guard_.maxDeviationBps == 0)) {
+        if (
+            guard_.stateView != address(0)
+                && (guard_.baseToken == address(0) || guard_.payoutToken == address(0) || guard_.maxDeviationBps == 0)
+        ) {
             revert InvalidGuard();
         }
         guardStateView = IStateViewLike(guard_.stateView);
@@ -316,7 +320,9 @@ contract NidhiHook is BaseHook, EIP712 {
     ///      The band must cover the pool fee plus expected impact; a manipulated or skewed pool falls outside it.
     function _checkReferencePrice(Mandate memory m, uint256 out) private view {
         if (address(guardStateView) == address(0)) return;
-        if (m.tokenIn != guardBaseToken || m.tokenOut != guardPayoutToken) revert GuardTokenMismatch(m.tokenIn, m.tokenOut);
+        if (m.tokenIn != guardBaseToken || m.tokenOut != guardPayoutToken) {
+            revert GuardTokenMismatch(m.tokenIn, m.tokenOut);
+        }
         (uint160 sqrtP,,,) = guardStateView.getSlot0(guardPoolId);
         uint256 p96 = FullMath.mulDiv(sqrtP, sqrtP, 1 << 96); // token1/token0 price, 2^96-scaled
         uint256 ref = guardBaseIsCurrency0 ? FullMath.mulDiv(p96, 1e18, 1 << 96) : FullMath.mulDiv(1e18, 1 << 96, p96);

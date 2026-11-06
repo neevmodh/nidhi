@@ -14,6 +14,7 @@ import Pool from "./pages/Pool";
 import Roles from "./pages/Roles";
 import Settings from "./pages/Settings";
 import Ens from "./pages/Ens";
+import Milestones from "./pages/Milestones";
 import { Audit, NotFound, Queue } from "./pages/Misc";
 import { Execute, NewGrant, Sign } from "./pages/Flow";
 import "./styles/tokens.css";
@@ -44,6 +45,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="queue" element={<Queue />} />
                 <Route path="roles" element={<Roles />} />
                 <Route path="ens" element={<Ens />} />
+                <Route path="milestones" element={<Milestones />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="*" element={<NotFound />} />
               </Route>

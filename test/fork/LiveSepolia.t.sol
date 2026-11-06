@@ -101,8 +101,16 @@ contract LiveSepoliaTest is Test {
     }
 
     function test_live_granteeSubnameResolvesOnChain() public onlyFork {
-        assertEq(authority.resolveGrantee("alice", BASE_SEPOLIA_SELECTOR), grantee, "alice.<dao>.eth -> Base addr via live ENSv2");
-        assertEq(authority.resolveGrantee("bob", BASE_SEPOLIA_SELECTOR), address(0), "unregistered subname resolves to nothing");
+        assertEq(
+            authority.resolveGrantee("alice", BASE_SEPOLIA_SELECTOR),
+            grantee,
+            "alice.<dao>.eth -> Base addr via live ENSv2"
+        );
+        assertEq(
+            authority.resolveGrantee("bob", BASE_SEPOLIA_SELECTOR),
+            address(0),
+            "unregistered subname resolves to nothing"
+        );
     }
 
     function test_live_ensRevocationIsImmediate() public onlyFork {
@@ -171,6 +179,13 @@ contract LiveSepoliaTest is Test {
         CCIPLocalSimulator sim = new CCIPLocalSimulator();
         IRouterClient router;
         (sel, router,,,, bnm,) = sim.configuration();
+        // the grant travels over the local simulator's selector: map it to the grantee's Base Sepolia address,
+        // since ENSv2Authority resolves per destination chain and fails closed for any unmapped one
+        uint64[] memory sels = new uint64[](1);
+        uint256[] memory coins = new uint256[](1);
+        sels[0] = sel;
+        coins[0] = COIN_BASE_SEPOLIA;
+        authority = new ENSv2Authority(IENSv2Registry(ENS_REGISTRY), label, sels, coins);
         weth = new MockERC20("WETH", "WETH", 18);
 
         nidhiRouter = new NidhiSwapRouter(manager);
@@ -179,11 +194,13 @@ contract LiveSepoliaTest is Test {
 
         // Mine a real hook address exactly as the deploy script does.
         uint160 flags = uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG);
-        bytes memory args =
-            abi.encode(manager, authority, dispatcher, address(nidhiRouter), dao, uint256(1 ether), LIVE_QUOTER, _noGuard());
+        bytes memory args = abi.encode(
+            manager, authority, dispatcher, address(nidhiRouter), dao, uint256(1 ether), LIVE_QUOTER, _noGuard()
+        );
         (address hookAddr, bytes32 salt) = HookMiner.find(address(this), flags, type(NidhiHook).creationCode, args);
-        hook =
-            new NidhiHook{salt: salt}(manager, authority, dispatcher, address(nidhiRouter), dao, 1 ether, LIVE_QUOTER, _noGuard());
+        hook = new NidhiHook{salt: salt}(
+            manager, authority, dispatcher, address(nidhiRouter), dao, 1 ether, LIVE_QUOTER, _noGuard()
+        );
         assertEq(address(hook), hookAddr, "mined address");
 
         vm.startPrank(dao);

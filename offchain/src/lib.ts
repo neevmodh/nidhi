@@ -36,6 +36,30 @@ export function evidenceHashOf(p: {
   );
 }
 
+/**
+ * Milestone spec hash: what the DAO approver commits to BEFORE the work exists, and signs as the mandate's
+ * evidenceHash. The agent later attests that this exact spec is satisfied, binding the SHA-pinned evidence in the
+ * attestation's inputsHash. Any change to the repo, RFP, grantee, chain, amount or rules changes the hash.
+ */
+export function specHashOf(id: string, m: any, rfp: string, rules: any): Hex {
+  return hashJson({
+    kind: "nidhi.milestone.v1",
+    id,
+    repo: m.repo,
+    rfpHash: hashText(rfp),
+    grantee: m.grantee,
+    payTo: m.payTo,
+    amountInWei: String(m.amountInWei),
+    requiredPathGlobs: m.requiredPathGlobs ?? [],
+    rules,
+  });
+}
+
+/** The rubric for one milestone: the DAO's base rules with that milestone's overrides. */
+export function milestoneRules(base: any, m: any): any {
+  return { ...base, ...(m.rules ?? {}), requiredPathGlobs: [...(base.requiredPathGlobs ?? []), ...(m.requiredPathGlobs ?? [])] };
+}
+
 // ------------------------------------------------------------------ GitHub (pinned to immutable SHAs)
 
 const GH = "https://api.github.com";
@@ -60,6 +84,14 @@ export interface Evidence {
   files: { filename: string; status: string; additions: number; deletions: number; sha: string }[];
   approvals: number;
   checks: { name: string; conclusion: string | null }[];
+}
+
+/** The most recent merged PR whose title carries the milestone tag, e.g. "[m1] Add the agent guide". */
+export async function findMilestonePr(repo: string, id: string): Promise<{ number: number; title: string; mergedAt: string } | null> {
+  const prs = await gh<any[]>(`/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=50`);
+  const tag = `[${id.toLowerCase()}]`;
+  const hit = prs.find((p) => p.merged_at && String(p.title).toLowerCase().includes(tag));
+  return hit ? { number: hit.number, title: hit.title, mergedAt: hit.merged_at } : null;
 }
 
 export async function fetchEvidence(repo: string, pr: number): Promise<{ evidence: Evidence; diff: string }> {

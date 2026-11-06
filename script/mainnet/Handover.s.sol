@@ -22,7 +22,9 @@ contract Handover is Script {
         string memory dep = vm.readFile(string.concat("deployments/", vm.toString(id), ".json"));
         string memory reg = vm.readFile(vm.envOr("REGISTRY", string("chains/registry.json")));
         address admin = vm.envAddress("MAINNET_ADMIN");
-        require(admin == vm.parseJsonAddress(dep, ".admin"), "MAINNET_ADMIN differs from the admin recorded at deploy time");
+        require(
+            admin == vm.parseJsonAddress(dep, ".admin"), "MAINNET_ADMIN differs from the admin recorded at deploy time"
+        );
 
         address dispatcher = vm.parseJsonAddress(dep, ".dispatcher");
         address receiver = vm.parseJsonAddress(dep, ".receiver");
@@ -30,13 +32,21 @@ contract Handover is Script {
         uint256 tokenId = vm.parseJsonUint(dep, ".positionId");
 
         vm.startBroadcast(vm.envUint("MAINNET_DEPLOYER_PRIVATE_KEY"));
-        if (NidhiDispatcher(payable(dispatcher)).owner() != admin && NidhiDispatcher(payable(dispatcher)).pendingOwner() != admin) {
+        if (
+            NidhiDispatcher(payable(dispatcher)).owner() != admin
+                && NidhiDispatcher(payable(dispatcher)).pendingOwner() != admin
+        ) {
             NidhiDispatcher(payable(dispatcher)).transferOwnership(admin);
         }
-        if (DestinationReceiver(payable(receiver)).owner() != admin && DestinationReceiver(payable(receiver)).pendingOwner() != admin) {
+        if (
+            DestinationReceiver(payable(receiver)).owner() != admin
+                && DestinationReceiver(payable(receiver)).pendingOwner() != admin
+        ) {
             DestinationReceiver(payable(receiver)).transferOwnership(admin);
         }
-        if (INft(posm).ownerOf(tokenId) != admin) INft(posm).transferFrom(vm.addr(vm.envUint("MAINNET_DEPLOYER_PRIVATE_KEY")), admin, tokenId);
+        if (INft(posm).ownerOf(tokenId) != admin) {
+            INft(posm).transferFrom(vm.addr(vm.envUint("MAINNET_DEPLOYER_PRIVATE_KEY")), admin, tokenId);
+        }
         vm.stopBroadcast();
 
         console2.log("chain", id);

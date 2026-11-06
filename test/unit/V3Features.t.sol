@@ -160,7 +160,9 @@ contract V3FeaturesTest is NidhiBase {
         assertEq(authority.resolveGrantee("nobody", chainSelector), address(0));
         assertEq(authority.resolveGrantee("", chainSelector), address(0));
         assertEq(
-            authority.resolveGrantee("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", chainSelector),
+            authority.resolveGrantee(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", chainSelector
+            ),
             address(0)
         );
         // DAO without a subregistry resolves nothing
@@ -316,11 +318,16 @@ contract ResolveGranteeFailClosedTest is NidhiBase {
     }
 
     function test_revertingSubregistry() public {
-        assertEq(_authorityWithSub(address(new RevertingSubregistry())).resolveGrantee("alice", chainSelector), address(0));
+        assertEq(
+            _authorityWithSub(address(new RevertingSubregistry())).resolveGrantee("alice", chainSelector), address(0)
+        );
     }
 
     function test_subregistryWithoutResolver() public {
-        assertEq(_authorityWithSub(address(new FixedSubregistry(address(0)))).resolveGrantee("alice", chainSelector), address(0));
+        assertEq(
+            _authorityWithSub(address(new FixedSubregistry(address(0)))).resolveGrantee("alice", chainSelector),
+            address(0)
+        );
     }
 
     function test_revertingResolver() public {

@@ -47,7 +47,9 @@ contract RoleAuthorityFlowTest is NidhiBase {
         roles.revokeRole(role, approver);
         Mandate memory m = _mandate(_newGrantId(), AMOUNT_IN);
         bytes memory hd = _hookData(m);
-        _expectHookRevert(IHooks.beforeSwap.selector, abi.encodeWithSelector(NidhiHook.NotAuthorized.selector, role, approver));
+        _expectHookRevert(
+            IHooks.beforeSwap.selector, abi.encodeWithSelector(NidhiHook.NotAuthorized.selector, role, approver)
+        );
         _swap(m, hd);
     }
 
@@ -66,7 +68,8 @@ contract RoleAuthorityFlowTest is NidhiBase {
         Mandate memory m = _mandate(_newGrantId(), AMOUNT_IN);
         bytes memory hd = _hookData(m);
         _expectHookRevert(
-            IHooks.beforeSwap.selector, abi.encodeWithSelector(NidhiHook.RecipientMismatch.selector, address(0), recipient)
+            IHooks.beforeSwap.selector,
+            abi.encodeWithSelector(NidhiHook.RecipientMismatch.selector, address(0), recipient)
         );
         _swap(m, hd);
     }
@@ -89,11 +92,17 @@ contract RoleAuthorityFlowTest is NidhiBase {
 
         bytes32 approverRole = roles.APPROVER();
         bytes32 adminRole = roles.DEFAULT_ADMIN_ROLE();
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(this), adminRole));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(this), adminRole)
+        );
         roles.grantRole(approverRole, address(this));
 
         bytes32 granteeAdmin = roles.GRANTEE_ADMIN();
-        vm.expectRevert(abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(this), granteeAdmin));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, address(this), granteeAdmin
+            )
+        );
         roles.setGrantee("x", chainSelector, address(1));
     }
 
@@ -102,7 +111,9 @@ contract RoleAuthorityFlowTest is NidhiBase {
         vm.expectRevert(RoleAuthority.LabelTooLong.selector);
         roles.setGrantee("", chainSelector, address(1));
         vm.expectRevert(RoleAuthority.LabelTooLong.selector);
-        roles.setGrantee("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", chainSelector, address(1));
+        roles.setGrantee(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", chainSelector, address(1)
+        );
         vm.expectEmit(true, true, true, true, address(roles));
         emit RoleAuthority.GranteeSet("bob", chainSelector, address(0xB0B), daoOwner);
         roles.setGrantee("bob", chainSelector, address(0xB0B));
@@ -154,7 +165,9 @@ contract PriceGuardTest is NidhiBase {
             return bytes4(0);
         } catch (bytes memory err) {
             bytes memory body = new bytes(err.length - 4);
-            for (uint256 i; i < body.length; ++i) body[i] = err[i + 4];
+            for (uint256 i; i < body.length; ++i) {
+                body[i] = err[i + 4];
+            }
             (,, bytes memory reason,) = abi.decode(body, (address, bytes4, bytes, bytes));
             return bytes4(reason);
         }
@@ -174,7 +187,11 @@ contract PriceGuardTest is NidhiBase {
         stateView.setSqrtPrice(address(weth) < address(bnm) ? skewed : uint160((uint256(ONE) * 1000) / 1025));
         Mandate memory m = _mandate(_newGrantId(), AMOUNT_IN);
         bytes memory hd = _hookData(m);
-        assertEq(_hookRevertSelector(hd), NidhiHook.PriceDeviation.selector, "rejected by the price guard, not something else");
+        assertEq(
+            _hookRevertSelector(hd),
+            NidhiHook.PriceDeviation.selector,
+            "rejected by the price guard, not something else"
+        );
         assertFalse(hook.grantUsed(m.grantId), "whole tx reverted: grant not consumed");
     }
 
@@ -264,7 +281,8 @@ contract MultiChainRoutingTest is NidhiBase {
         bytes memory hd = _hookData(m);
         // the hook authorizes first; the recipient lookup for an unmapped chain fails closed
         _expectHookRevert(
-            IHooks.beforeSwap.selector, abi.encodeWithSelector(NidhiHook.RecipientMismatch.selector, address(0), recipient)
+            IHooks.beforeSwap.selector,
+            abi.encodeWithSelector(NidhiHook.RecipientMismatch.selector, address(0), recipient)
         );
         _swap(m, hd);
     }
@@ -301,7 +319,9 @@ contract MultiChainRoutingTest is NidhiBase {
             destTokenAmounts: t
         });
         vm.prank(address(ccipRouter));
-        vm.expectRevert(abi.encodeWithSelector(DestinationReceiver.UnknownSource.selector, OTHER_CHAIN, address(dispatcher)));
+        vm.expectRevert(
+            abi.encodeWithSelector(DestinationReceiver.UnknownSource.selector, OTHER_CHAIN, address(dispatcher))
+        );
         receiver.ccipReceive(msg_);
     }
 
@@ -330,7 +350,11 @@ contract MultiChainRoutingTest is NidhiBase {
         // payout happened at the second receiver, but its ACK arrives labelled with the simulator's selector
         // (chainSelector), not OTHER_CHAIN -> the dispatcher must reject it and keep the grant open
         assertEq(bnm.balanceOf(recipient), 1 ether, "payout landed");
-        assertEq(uint8(dispatcher.statusOf(m.grantId)), uint8(NidhiDispatcher.Status.DISPATCHED), "not settled by a foreign-chain ACK");
+        assertEq(
+            uint8(dispatcher.statusOf(m.grantId)),
+            uint8(NidhiDispatcher.Status.DISPATCHED),
+            "not settled by a foreign-chain ACK"
+        );
         assertTrue(second.getPayout(m.grantId).ackPending, "second receiver keeps the ACK queued for retry");
         assertEq(dispatcher.getGrant(m.grantId).destSelector, OTHER_CHAIN);
     }

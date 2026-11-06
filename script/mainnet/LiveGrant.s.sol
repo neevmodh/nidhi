@@ -58,16 +58,17 @@ contract LiveGrant is Script {
         vm.startBroadcast(pk);
         if (IWrapped(c.base).balanceOf(executor) < c.amountIn) IWrapped(c.base).deposit{value: c.amountIn}();
         IWrapped(c.base).approve(address(c.router), c.amountIn);
-        c.router.swap(
-            c.key,
-            SwapParams({
-                zeroForOne: zeroForOne,
-                amountSpecified: -int256(uint256(c.amountIn)),
-                sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
-            }),
-            hookData,
-            block.timestamp + 600
-        );
+        c.router
+            .swap(
+                c.key,
+                SwapParams({
+                    zeroForOne: zeroForOne,
+                    amountSpecified: -int256(uint256(c.amountIn)),
+                    sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : TickMath.MAX_SQRT_PRICE - 1
+                }),
+                hookData,
+                block.timestamp + 600
+            );
         vm.stopBroadcast();
 
         console2.log("grantId");

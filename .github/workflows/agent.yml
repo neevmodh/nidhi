@@ -1,0 +1,64 @@
+name: agent
+
+# The Nidhi milestone agent. When a pull request tagged with a milestone ("[m1] ...") is merged, it verifies the work
+# against the DAO's pre-signed milestone spec and, if it passes, signs its attestation and pays the grantee on-chain.
+# Payment cannot happen twice: the hook marks each milestone's grantId used.
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: "*/15 * * * *" # fallback: catches merges that happened while a run was busy
+  workflow_dispatch:
+    inputs:
+      milestone:
+        description: "Only this milestone (e.g. m1); empty checks all"
+        required: false
+      dry_run:
+        description: "Verify and sign, but send nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+concurrency:
+  group: nidhi-agent
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: offchain
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: offchain/package-lock.json
+      - run: npm ci
+      - name: Wait for the merged PR's checks to settle
+        if: github.event_name == 'pull_request'
+        run: sleep 60
+      - name: Verify milestones and pay
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # read-only: PRs, reviews, check runs
+          PRIVATE_KEY: ${{ secrets.AGENT_EXECUTOR_PRIVATE_KEY }} # the mandate's executor (testnet treasury hot key)
+          AUDITOR_PRIVATE_KEY: ${{ secrets.AGENT_AUDITOR_PRIVATE_KEY }} # holds the ENS auditor role
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          UNISWAP_API_KEY: ${{ secrets.UNISWAP_API_KEY }}
+          SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
+        run: node src/agent.ts ${{ inputs.milestone }} ${{ inputs.dry_run && '--dry-run' || '' }}
+      - name: Keep the run record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-run-${{ github.run_id }}
+          path: offchain/out/agent/
+          if-no-files-found: ignore
