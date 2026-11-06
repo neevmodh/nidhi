@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "sync": "node scripts/sync.mjs",
     "predev": "npm run sync",
-    "prebuild": "npm run sync && npm run snapshot",
+    "prebuild": "npm run sync && npm run snapshot && node scripts/prs.mjs",
     "check:design": "node scripts/check-design.mjs",
     "snapshot": "node scripts/snapshot.mjs"
   },

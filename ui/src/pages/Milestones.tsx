@@ -6,6 +6,7 @@ import { addrUrl, chainById, client, stackOf, stacksOf, txUrl } from "../lib/cha
 import { contractLogs } from "../lib/logcache";
 import { amount, ago, short } from "../lib/format";
 import data from "../data/milestones.json";
+import prsSnapshot from "../data/prs.json";
 import { nidhiBountyBoardAbi } from "../data/abi";
 import { chainBySelector } from "../lib/chains";
 import NewMilestone from "./NewMilestone";
@@ -21,24 +22,52 @@ const statusAbi = [{ type: "function", name: "statusOf", stateMutability: "view"
 
 interface PrInfo { number: number; title: string; url: string; state: "open" | "merged" | "closed"; author: string; approvals: number; checks: { total: number; failed: number; pending: number } }
 
+// GitHub status. The build bakes a snapshot (scripts/prs.mjs, with CI's token), so the page shows PR state with no
+// GitHub request at all. The browser then refreshes it gently: one shared PR list for every card, ETag-cached replies
+// (a 304 does not count against GitHub's 60-per-hour unauthenticated limit), and no refresh once a PR is merged.
+// If GitHub refuses, the card keeps the last known status instead of going blank.
+const SNAP = prsSnapshot as { fetchedAt: string | null; prs: Record<string, PrInfo> };
 const GH = "https://api.github.com";
+class GhLimit extends Error {}
 const gh = async (p: string) => {
-  const r = await fetch(`${GH}${p}`, { headers: { Accept: "application/vnd.github+json" } });
-  if (!r.ok) throw new Error(r.status === 403 ? "GitHub rate limit reached; try again shortly" : `GitHub ${r.status}`);
-  return r.json();
+  const key = `nidhi.gh:${p}`;
+  let cached: { etag: string; body: unknown } | null = null;
+  try { cached = JSON.parse(localStorage.getItem(key) ?? "null"); } catch { cached = null; }
+  const r = await fetch(`${GH}${p}`, { headers: { Accept: "application/vnd.github+json", ...(cached?.etag ? { "If-None-Match": cached.etag } : {}) } });
+  if (r.status === 304 && cached) return cached.body as any;
+  if (!r.ok) {
+    if (cached) return cached.body as any; // stale but real beats blank
+    throw r.status === 403 || r.status === 429 ? new GhLimit("GitHub's hourly limit for this network is used up") : new Error(`GitHub ${r.status}`);
+  }
+  const body = await r.json();
+  try { const etag = r.headers.get("ETag"); if (etag) localStorage.setItem(key, JSON.stringify({ etag, body })); } catch { /* storage full or blocked */ }
+  return body;
 };
+
+/** one PR list per repo, shared by every milestone card */
+function usePrList(repo: string) {
+  return useQuery({
+    queryKey: ["pr-list", repo],
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+    retry: false,
+    queryFn: async (): Promise<any[]> => gh(`/repos/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=50`),
+  });
+}
 
 /** the newest PR (open or merged) tagged with the milestone id, with its reviews and CI */
 function usePr(repo: string, id: string) {
-  return useQuery({
-    queryKey: ["pr", repo, id],
-    staleTime: 60_000,
-    refetchInterval: 90_000,
-    queryFn: async (): Promise<PrInfo | null> => {
-      const tag = `[${id.toLowerCase()}]`;
-      const prs: any[] = await gh(`/repos/${repo}/pulls?state=all&sort=updated&direction=desc&per_page=50`);
-      const p = prs.find((x) => String(x.title).toLowerCase().includes(tag));
-      if (!p) return null;
+  const snap = SNAP.prs[`${repo}#${id.toLowerCase()}`];
+  const list = usePrList(repo);
+  const p = list.data?.find((x) => String(x.title).toLowerCase().includes(`[${id.toLowerCase()}]`));
+  const final = (snap?.state === "merged" && snap.checks.pending === 0) || (p?.merged_at && snap?.number === p.number && snap.checks.pending === 0);
+  const detail = useQuery({
+    queryKey: ["pr", repo, p?.number, p?.head?.sha],
+    enabled: !!p && !final,
+    staleTime: 5 * 60_000,
+    refetchInterval: p?.merged_at ? false : 5 * 60_000,
+    retry: false,
+    queryFn: async (): Promise<PrInfo> => {
       const [reviews, checks] = await Promise.all([
         gh(`/repos/${repo}/pulls/${p.number}/reviews?per_page=100`),
         gh(`/repos/${repo}/commits/${p.head.sha}/check-runs?per_page=100`),
@@ -56,6 +85,21 @@ function usePr(repo: string, id: string) {
       };
     },
   });
+  // what to show: live detail; else the snapshot when it is about the same PR; else "no PR yet" when the live list
+  // says so; else (list still loading, or GitHub refused) the snapshot as-is. undefined means "still loading".
+  let data: PrInfo | null | undefined;
+  if (detail.data) data = detail.data;
+  else if (p) data = snap && snap.number === p.number ? snap : undefined;
+  else if (list.data) data = null;
+  else if (SNAP.fetchedAt) data = snap ?? null;
+  else data = undefined;
+  const limited = list.error instanceof GhLimit || detail.error instanceof GhLimit;
+  return {
+    data,
+    isLoading: data === undefined && (list.isLoading || detail.isLoading),
+    error: data === undefined ? (list.error ?? detail.error) : null,
+    staleNote: limited && data ? `GitHub's hourly limit is used up on this network; showing the status from ${SNAP.fetchedAt ? ago(Date.parse(SNAP.fetchedAt) / 1000) : "the last build"}` : null,
+  };
 }
 
 /** did the agent verify (hook GrantAuthorized) and how far did the payout get (dispatcher status) */
@@ -139,6 +183,7 @@ function MilestoneCard({ id, m }: { id: string; m: any }) {
           {pr.isLoading ? <Skel w={200} /> : pr.error ? String((pr.error as Error).message) : p ? (
             <>
               <a className="link" href={p.url} target="_blank" rel="noreferrer">{p.title}</a> by {p.author} · {p.approvals} approval{p.approvals === 1 ? "" : "s"} · CI {p.checks.total === 0 ? "none yet" : p.checks.failed ? `${p.checks.failed} failed` : p.checks.pending ? `${p.checks.pending} running` : "green"}
+              {pr.staleNote && <span className="hint" style={{ display: "block", marginTop: 4 }}>{pr.staleNote}</span>}
             </>
           ) : m.open ? <>open a pull request titled <span className="mono">[{id}] …</span> and add <span className="mono">nidhi-wallet: 0x…</span> to its description</> : `open a pull request whose title contains [${id}]`}
         </Step>

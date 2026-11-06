@@ -1,0 +1,31 @@
+{
+ "fetchedAt": "2026-11-06T20:26:18.077Z",
+ "prs": {
+  "neevmodh/nidhi#b2": {
+   "number": 13,
+   "title": "[b2] Add a FAQ about faster CCIP payments",
+   "url": "https://github.com/neevmodh/nidhi/pull/13",
+   "author": "neevmodh",
+   "state": "open",
+   "approvals": 0,
+   "checks": {
+    "total": 5,
+    "failed": 0,
+    "pending": 0
+   }
+  },
+  "neevmodh/nidhi#m1": {
+   "number": 3,
+   "title": "[m1] docs: how milestone grants are paid",
+   "url": "https://github.com/neevmodh/nidhi/pull/3",
+   "author": "neevmodh",
+   "state": "merged",
+   "approvals": 0,
+   "checks": {
+    "total": 5,
+    "failed": 0,
+    "pending": 0
+   }
+  }
+ }
+}
