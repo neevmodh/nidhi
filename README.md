@@ -41,6 +41,8 @@ Ownership is handed to the DAO admin `0x9f75…b9C7` (Ownable2Step).
 | Arbitrum Sepolia | [`0x56d56254…80c4`](https://sepolia.arbiscan.io/address/0x56d56254A518142375E9eA9a69f310aB8D7b80c4) | [`0xB2ab0955…D36A`](https://sepolia.arbiscan.io/address/0xB2ab0955a101802Bc9e2F1ec099Bd74Aed9bD36A) | [`0xd52365cA…D6B9`](https://sepolia.arbiscan.io/address/0xd52365cA8Fa5Cf07f3Bd9dFd64c024E455F4D6B9) | [`0x11252C99…0216`](https://sepolia.arbiscan.io/address/0x11252C994ccba7BE458D78C8901dAD6B5D1F0216) |
 | Unichain Sepolia | [`0x2835f2af…C0c4`](https://unichain-sepolia.blockscout.com/address/0x2835f2af22486B547EE2E3F94805160b380bC0c4) | [`0xB2ab0955…D36A`](https://unichain-sepolia.blockscout.com/address/0xB2ab0955a101802Bc9e2F1ec099Bd74Aed9bD36A) | [`0xd52365cA…D6B9`](https://unichain-sepolia.blockscout.com/address/0xd52365cA8Fa5Cf07f3Bd9dFd64c024E455F4D6B9) | [`0x11252C99…0216`](https://unichain-sepolia.blockscout.com/address/0x11252C994ccba7BE458D78C8901dAD6B5D1F0216) |
 
+**ENSv2-gated stack (Sepolia):** [`ENSv2Authority` 0x92ceAa59…5600](https://sepolia.etherscan.io/address/0x92ceAa59dfB8Ce4A85dCECFd26e50Ba58e375600) on `nidhi-dao.eth` · hook [`0x88257DA3…80c4`](https://sepolia.etherscan.io/address/0x88257DA3a88Aaaf8b3EEF52112Bfb9C3596580c4) · dispatcher [`0x2bE281A8…A07b`](https://sepolia.etherscan.io/address/0x2bE281A806d754c2a7b5899a7effb649Fb72A07b), with its own receivers on [Base Sepolia](https://sepolia.basescan.org/address/0x9197993f0c9fc1B9920e9f1b81b4852334B2Cc83) and [Arbitrum Sepolia](https://sepolia.arbiscan.io/address/0xa08D0621872539A8b5c0DB986BDb7367833aA6cA).
+
 Lanes wired: Sepolia ⇄ Base, Sepolia ⇄ Arbitrum, Sepolia ⇄ Unichain, Base ⇄ Arbitrum, Arbitrum ⇄ Unichain. All addresses
 are in `deployments/<chainId>.json`; chain data comes from `chains/testnets.json`, generated and checked on-chain by
 `offchain/src/testnets.ts`.
@@ -52,6 +54,12 @@ are in `deployments/<chainId>.json`; chain data comes from `chains/testnets.json
 | **Base Sepolia → Arbitrum Sepolia:** signed, swapped in the hook, bridged, 0.2934 BnM paid to the grantee, ACK back → `SETTLED` | [swap](https://sepolia.basescan.org/tx/0xdd2b11a77fa318b95c812589f07211ad71e0fbc0e174fc6b78487a1bc1b328a0) · [CCIP](https://ccip.chain.link/msg/0x60433b4f9215063950bde9736f3618766fdbbdde7f43e895dba724fc3d2faf7e) · [payout](https://sepolia.arbiscan.io/tx/0x74c5f98f165389683c3201ce3b283e63e9965eaed03c5faed8d389e8f6d3c21c) |
 | **Sepolia → Base Sepolia:** same loop, 0.2917 BnM paid → `SETTLED` | [swap](https://sepolia.etherscan.io/tx/0xf2d1a270524c098410037c03720714fbe049fba9ba880b1463c0b3fd53f9207a) · [CCIP](https://ccip.chain.link/msg/0x9c3ddac23e4af71f197c9b71b36b36f11fdbc8068e25c8c6d36468d65ff1fdfa) · [payout](https://sepolia.basescan.org/tx/0xf3e05ffddcbd9e86ca12ae3c84783a1f1482824613f4ed6cbdf9449e1d628294) |
 | **The app's own signing code, on-chain:** a grant built, quoted (V4Quoter) and signed with `ui/src/lib/mandate.ts`, carrying the real audit evidence of `nidhi-001` | [swap](https://sepolia.basescan.org/tx/0x23c79346238efea4b006f4a6a9533d26a393609630783a38fb89c84170f76c74) ([`ui/scripts/e2e-grant.ts`](ui/scripts/e2e-grant.ts)) |
+
+| **ENSv2-gated grant to `alice.nidhi-dao.eth`:** roles read from the DAO's ENS name, payee resolved through the ENSv2 subregistry for Base Sepolia, swapped and sent by CCIP | [swap](https://sepolia.etherscan.io/tx/0x696887ae1880740414a2746ad6c2e764f248781ecf26eaaaabcda723088fe3e0) · [CCIP](https://ccip.chain.link/msg/0xe5721859a03a43697d7ce3b2c5fcd8a73a5d5c9ed881ab34db33edb4ccba17a2) |
+| **The AI auditor, as the ENS agent `auditor.nidhi-dao.eth`, published its attestation** to the one text record it may write | [`setText`](https://sepolia.etherscan.io/tx/0x9956a77cc937c7c33839c7882fa8de598bf8f5c296e1ad88d44ade924586c85c) |
+| **`bob.nidhi-dao.eth` got his own Permissioned Resolver**; the DAO key then gave up its setter role, so only bob controls where he is paid | [resolver](https://sepolia.etherscan.io/tx/0x4fa99ec2271f4622b63b77186131c70612912f524517d6c2ca81bb5fc01be10d) · [renounce](https://sepolia.etherscan.io/tx/0xe39eb0a174890df7e9771519cf1c9e619a58128a792a5f2cbf05c779bc570e73) |
+| **`carol.nidhi-dao.eth` registered with an expiry = her grant period**; after it, ENS stops resolving her and the hook refuses to pay | [register](https://sepolia.etherscan.io/tx/0x5de4f4a47b52aad6088d5ad189ff0911caf60106f91fbf3905c7223998a50953) |
+| An **unregistered name (`mallory`) is refused** by the ENS-gated hook with `RecipientMismatch` | simulated against live state (`script/ens/`, nothing sent) |
 
 The first two grants carried a fixed evidence hash; the third carries the auditor's real one.
 
@@ -73,6 +81,37 @@ because their CCIP RMN was cursed when checked. Deploying needs a funded deploye
 | **Batch**: two grants in one transaction (all or nothing) | [`0x79ffe1e4…`](https://sepolia.etherscan.io/tx/0x79ffe1e465629d551db0361e45caea158e5a17506e6d5216eacd1ee66804a003) |
 
 The v3 scripts are archived in [`legacy/sepolia-v3/`](legacy/sepolia-v3/).
+
+## Prize tracks: what each asks for, and where it is
+
+### Build with Uniswap
+| They ask for | Nidhi |
+|---|---|
+| A new v4 hook | `NidhiHook`: mandate-gated, captures its own output with `afterSwapReturnDelta`, live on 4 testnets ([`_beforeSwap` L238](src/NidhiHook.sol#L238), [`_afterSwap` L351](src/NidhiHook.sol#L351)) |
+| Uniswap AMM v4 | Real PoolManagers; DAO liquidity as a PositionManager NFT via Permit2 ([`_mintUsdcOnly`](script/mainnet/Deploy.s.sol)); exact quotes from V4Quoter, which the hook lets through ([L245](src/NidhiHook.sol#L245)); an on-chain price guard from StateView ([`_checkReferencePrice` L317](src/NidhiHook.sol#L317)) |
+| The Uniswap API | Trading API for the auditor's USD valuation and treasury funding ([`tradingApi.ts`](offchain/src/uniswap/tradingApi.ts), [`treasury.ts`](offchain/src/treasury.ts)) |
+| Tooling for the ecosystem | A generated, on-chain-checked registry of every v4 chain ([`registry.ts`](offchain/src/registry.ts), [`testnets.ts`](offchain/src/testnets.ts)) and fork rehearsals ([`rehearse-all.sh`](offchain/rehearse-all.sh)) |
+| `FEEDBACK.md` | [FEEDBACK.md](FEEDBACK.md) |
+
+### Best Use of ENSv2
+| They ask for | Nidhi |
+|---|---|
+| ENSv2 central, not cosmetic | On the Sepolia ENS stack the DAO's name **is** the authority: no ENS role, no grant; no ENS name, no payee ([`ENSv2Authority`](src/ENSv2Authority.sol): [`isAuthorized` L94](src/ENSv2Authority.sol#L94), [`resolveGrantee` L105](src/ENSv2Authority.sol#L105)) |
+| Enhanced Access Control to delegate specific rights | Each role is permission to set one text record on `nidhi-dao.eth`; the auditor agent may set only `nidhi.attestation` |
+| Your own subname registry | A UserRegistry for `*.nidhi-dao.eth`; grantees are subnames ([`EnsSetup.s.sol`](script/ens/EnsSetup.s.sol)) |
+| Subnames with their own Permissioned Resolver | `bob.nidhi-dao.eth` owns his resolver; the DAO renounced its setter role |
+| Expiring / revocable subnames | `carol.nidhi-dao.eth` expires with her grant period; a revoked role stops a signer on the next swap (proven live in v3) |
+| Bonus: AI agents as namespaces | `auditor.nidhi-dao.eth`, the AI auditor, publishes each signed verdict to its own record |
+| Functional demo, no hard-coded values | The app's ENS page reads roles, resolvers, per-chain addresses, expiry and the agent's record live from ENSv2 ([`Ens.tsx`](ui/src/pages/Ens.tsx)) |
+
+### Best use of Chainlink CCIP 2.0
+| They ask for | Nidhi |
+|---|---|
+| CCIP inside smart contracts, changing state | A programmable token transfer pays the grantee; a second message (the ACK) moves the source ledger to `SETTLED` ([`dispatch` L120](src/NidhiDispatcher.sol#L120), [`NidhiDispatcher._ccipReceive` L182](src/NidhiDispatcher.sol#L182)) |
+| Token transfers and arbitrary messaging | Both, in both directions, over 5 live lanes between 4 testnets |
+| Liquidity across multiple chains | A hooked v4 pool on every chain, each able to pay any chain it has a lane to |
+| CCIP Local Simulator | Used across the Foundry tests (`test/`) |
+| Encouraged: Automation, Data Feeds, CRE, VRF | Automation-compatible receiver queue ([`checkUpkeep` L263](src/DestinationReceiver.sol#L263)); not registered on testnet (needs LINK). Data Feeds, CRE and VRF are not used |
 
 ## Sponsor integrations (with exact code)
 
