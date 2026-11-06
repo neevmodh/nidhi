@@ -1,8 +1,8 @@
 /* Nidhi design tokens. One system: one radius family, one button pair, one card, one hairline.
-   Evening (warm black, default) and Day (bone). No violet anywhere: hues stay in gold, earth and sage. */
+   Day (white and ivory, default) and Evening (warm charcoal). One honey accent; no violet anywhere. */
 
 :root {
-  /* spacing scale (taste-skill): 4 8 12 16 24 32 48 64 96 128 */
+  /* spacing scale: 4 8 12 16 24 32 48 64 96 128 */
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px;
   --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px; --s-10: 128px;
 
@@ -10,20 +10,20 @@
   --gut: 80px;
   --wrap: 1280px;
 
-  /* radius: soft */
-  --r-sm: 8px; --r-md: 12px; --r-lg: 20px; --r-btn: 10px; --r-win: 16px;
+  /* radius: round, pill buttons */
+  --r-sm: 12px; --r-md: 16px; --r-lg: 24px; --r-xl: 32px; --r-btn: 999px; --r-win: 20px;
   --btn-h: 44px;
 
-  /* type */
-  --f-display: "Fraunces", Georgia, serif;
-  --f-text: "Geist", ui-sans-serif, sans-serif;
+  /* type: one sans family (bold for display), one mono */
+  --f-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --f-text: "Geist", ui-sans-serif, system-ui, sans-serif;
   --f-mono: "Geist Mono", ui-monospace, monospace;
-  --t-h1: clamp(38px, 4.2vw + 12px, 72px);
-  --t-h2: clamp(30px, 2.3vw + 15px, 48px);
-  --t-h3: clamp(24px, .6vw + 19px, 28px);
+  --t-h1: clamp(40px, 4.4vw + 12px, 72px);
+  --t-h2: clamp(30px, 2.2vw + 16px, 46px);
+  --t-h3: clamp(22px, .6vw + 18px, 28px);
   --t-stat: clamp(28px, 1vw + 22px, 38px);
-  --t-card: clamp(18px, .2vw + 17px, 20px);
-  --t-lead: clamp(18px, .2vw + 17px, 20px);
+  --t-card: clamp(17px, .2vw + 16px, 19px);
+  --t-lead: clamp(17px, .3vw + 16px, 19px);
   --t-body: 16px;
   --t-small: 14px;
   --t-label: 13px;
@@ -33,44 +33,60 @@
   --d-fast: 160ms;
   --d: 220ms;
 
-  /* Evening grade (default) */
-  --g-main: #0E0B08;
-  --g-alt: #17130F;
-  --g-raise: #1F1A14;
-  --ink: #F4EFE6;
-  --muted: #A39887;
-  --line: rgb(244 239 230 / .12);
-  --line-strong: rgb(244 239 230 / .22);
-  --accent: #C9A45A;
-  --accent-ink: #1A140C;
-  --accent-soft: rgb(201 164 90 / .14);
-  --ok: #8DB597;
-  --warn: #D9A066;
-  --bad: #D27466;
-  --glow: rgb(201 164 90 / .10);
-  color-scheme: dark;
-}
-
-:root[data-grade="day"] {
-  --g-main: #F3EEE4;
-  --g-alt: #E9E2D5;
-  --g-raise: #FBF8F2;
-  --ink: #1C1610;
-  --muted: #65594B;
-  --line: rgb(28 22 16 / .13);
-  --line-strong: rgb(28 22 16 / .24);
-  --accent: #8C6A2A;
-  --accent-ink: #FBF8F2;
-  --accent-soft: rgb(140 106 42 / .12);
-  --ok: #3F6B4C;
-  --warn: #8F541C;
-  --bad: #9C3B30;
-  --glow: transparent;
+  /* Day grade (default): white, ivory, honey */
+  --g-main: #FFFFFF;
+  --g-alt: #F7F5F0;
+  --g-raise: #FFFFFF;
+  --g-tint: #FAF8F3;
+  --ink: #1C1A17;
+  --ink-2: #4A453D;
+  --muted: #6B655B;
+  --line: #ECE8DF;
+  --line-strong: #D9D3C6;
+  --accent: #F4C247;
+  --accent-ink: #3A2A0C;
+  --accent-text: #8C5E12;
+  --accent-soft: #FBF3DF;
+  --ok: #2F7A4B;
+  --ok-soft: #EAF5EE;
+  --warn: #9A5B12;
+  --bad: #B3402F;
+  --glow: #FDF3D6;
+  --shadow: 0 16px 40px rgb(28 26 23 / .07);
+  --shadow-sm: 0 1px 2px rgb(28 26 23 / .06);
+  --ens: #3888FF;
+  --ens-soft: #EEF4FF;
   color-scheme: light;
 }
 
+:root[data-grade="evening"] {
+  --g-main: #14120F;
+  --g-alt: #1E1B17;
+  --g-raise: #1A1814;
+  --g-tint: #181612;
+  --ink: #F4EFE6;
+  --ink-2: #D6CEC0;
+  --muted: #A79F92;
+  --line: #2C2823;
+  --line-strong: #3E3932;
+  --accent: #F4C247;
+  --accent-ink: #2A1F08;
+  --accent-text: #F4C247;
+  --accent-soft: rgb(244 194 71 / .12);
+  --ok: #7FC096;
+  --ok-soft: rgb(127 192 150 / .12);
+  --warn: #E2A75E;
+  --bad: #E07A68;
+  --glow: rgb(244 194 71 / .10);
+  --shadow: 0 16px 40px rgb(0 0 0 / .35);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / .4);
+  --ens: #6EA8FF;
+  --ens-soft: rgb(56 136 255 / .14);
+  color-scheme: dark;
+}
+
 @media (max-width: 640px) {
-  :root { --nav: 56px; --gut: 24px; }
+  :root { --nav: 60px; --gut: 20px; }
 }
 @media (min-width: 641px) and (max-width: 1023px) {
   :root { --gut: 40px; }

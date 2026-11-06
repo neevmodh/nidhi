@@ -147,7 +147,7 @@ if (fs.existsSync(path.join(repo, "out", "NidhiHook.sol"))) {
 
 // ---- interface icons: one Phosphor sprite (regular weight)
 const ICONS = [
-  "arrow-right", "arrow-up-right", "arrow-left", "caret-down", "caret-right", "check", "x", "copy", "wallet",
+  "arrow-right", "arrow-up-right", "arrow-left", "caret-down", "caret-right", "caret-left", "check", "x", "copy", "wallet",
   "plus", "magnifying-glass", "circle", "circle-half", "warning", "pause", "play", "arrows-left-right",
   "shield-check", "signature", "scales", "coins", "vault", "gear-six", "list", "moon", "sun", "lightning",
   "git-pull-request", "clock", "link-simple", "users-three", "drop", "graph", "arrow-clockwise", "lock-simple",

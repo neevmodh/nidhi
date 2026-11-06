@@ -117,17 +117,22 @@ export function Footer() {
   return (
     <footer className="foot">
       <div className="wrap foot__in">
-        <div className="stack">
+        <div className="stack foot__brand">
           <Logo height={30} />
-          <p className="muted small measure">Grants paid by a Uniswap v4 hook and settled by Chainlink CCIP, after two signatures.</p>
+          <p className="muted small measure">Nidhi means treasury in Sanskrit. DAO grants paid on the contributor's chain, only after the work is checked.</p>
         </div>
         <div className="foot__cols">
-          <div className="stack small"><p className="label">Product</p><Link className="link" to="/app">Open the app</Link><Link className="link" to="/app/network">Chains and lanes</Link><Link className="link" to="/app/settings">Settings</Link></div>
-          <div className="stack small"><p className="label">Source</p><a className="link" href="https://github.com/neevmodh/nidhi" target="_blank" rel="noreferrer">Contracts</a><a className="link" href="https://github.com/neevmodh/nidhi/tree/main/docs/architecture" target="_blank" rel="noreferrer">Architecture</a><a className="link" href="https://github.com/neevmodh/nidhi/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Security</a></div>
+          <div className="stack small"><p className="label">Product</p><Link className="link" to="/app">Open the app</Link><Link className="link" to="/app/milestones">Milestones</Link><Link className="link" to="/app/grants">Live grants</Link></div>
+          <div className="stack small"><p className="label">Build</p><a className="link" href="https://github.com/neevmodh/nidhi" target="_blank" rel="noreferrer">GitHub</a><a className="link" href="https://github.com/neevmodh/nidhi/tree/main/docs/architecture" target="_blank" rel="noreferrer">Architecture</a><a className="link" href="https://github.com/neevmodh/nidhi/blob/main/docs/faq.md" target="_blank" rel="noreferrer">FAQ</a></div>
+          <div className="stack small"><p className="label">Built on</p>
+            <a className="foot__proto" href="https://docs.uniswap.org/contracts/v4/overview" target="_blank" rel="noreferrer"><ProtocolLogo name="uniswap" />Uniswap v4</a>
+            <a className="foot__proto" href="https://docs.chain.link/ccip" target="_blank" rel="noreferrer"><ProtocolLogo name="chainlink" />Chainlink CCIP</a>
+            <a className="foot__proto" href="https://docs.ens.domains" target="_blank" rel="noreferrer"><ProtocolLogo name="ens" />ENS</a>
+          </div>
         </div>
       </div>
       <div className="wrap foot__legal small muted">
-        <span>nidhi {new Date().getFullYear()}</span>
+        <span>nidhi {new Date().getFullYear()} · built at ETHGlobal Mumbai</span>
         <span>Testnet deployment. Product names and logos are trademarks of their owners.</span>
       </div>
     </footer>
@@ -135,10 +140,14 @@ export function Footer() {
 }
 
 export function AppLayout() {
+  const { pathname } = useLocation();
+  const landing = pathname === "/";
   return (
     <>
       <AppBar />
-      <main id="main" className="page"><div className="wrap"><Outlet /></div></main>
+      {landing
+        ? <main id="main" className="landing"><Outlet /></main>
+        : <main id="main" className="page"><div className="wrap"><Outlet /></div></main>}
       <Footer />
       <nav className="actionbar"><Link to="/app/new" className="btn btn--primary btn--block"><Icon name="plus" size="sm" />New grant</Link></nav>
     </>
