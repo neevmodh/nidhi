@@ -121,7 +121,7 @@ function MilestoneCard({ id, m }: { id: string; m: any }) {
         <span className="label mono">[{id}]</span>
         {overall}
       </div>
-      <h2 className="h3" style={{ fontFamily: "var(--f-display)", fontSize: "var(--t-h3)" }}>{m.title}</h2>
+      <h2 className="h3" style={{ fontSize: "var(--t-h3)" }}>{m.title}</h2>
       <p className="muted small">{m.rfpText.replace(/^#.*\n+/, "").trim().split("\n").join(" ")}</p>
       <dl className="kv small">
         <dt>Pays</dt><dd>{m.open ? <>the first merged PR's author, as <span className="mono">&lt;github&gt;.nidhi-dao.eth</span>, on </> : <>{m.grantee}.nidhi-dao.eth on </>}<ChainName chain={dest} /></dd>

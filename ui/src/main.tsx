@@ -31,7 +31,7 @@ createRoot(document.getElementById("root")!).render(
         <AppProvider>
           <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<AppLayout />}><Route index element={<Landing />} /></Route>
               <Route path="/app" element={<AppLayout />}>
                 <Route index element={<Overview />} />
                 <Route path="grants" element={<Grants />} />

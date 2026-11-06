@@ -26,7 +26,7 @@ const save = (k: string, v: string) => { try { localStorage.setItem(k, v); } cat
 export function AppProvider({ children }: { children: ReactNode }) {
   const first = (CHAINS.find((c) => c.id === 84532) ?? CHAINS[0]).id;
   const [chainId, setChainIdRaw] = useState<ChainId>(() => (Number(load("nidhi.chain")) as ChainId) || first);
-  const [grade, setGradeRaw] = useState<Grade>(() => (new URLSearchParams(location.search).get("grade") as Grade) || (load("nidhi.grade") as Grade) || "evening");
+  const [grade, setGradeRaw] = useState<Grade>(() => (new URLSearchParams(location.search).get("grade") as Grade) || (load("nidhi.grade") as Grade) || "day");
   useEffect(() => { document.documentElement.dataset.grade = grade; }, [grade]);
   const setChainId = (id: ChainId) => { setChainIdRaw(id); save("nidhi.chain", String(id)); };
   const setGrade = (g: Grade) => { setGradeRaw(g); save("nidhi.grade", g); };
