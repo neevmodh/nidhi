@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { parseAbiItem, parseEventLogs, type Address, type Hex } from "viem";
@@ -5,6 +6,9 @@ import { addrUrl, chainById, client, stackOf, txUrl } from "../lib/chains";
 import { contractLogs } from "../lib/logcache";
 import { amount, ago, short } from "../lib/format";
 import data from "../data/milestones.json";
+import { nidhiBountyBoardAbi } from "../data/abi";
+import { chainBySelector } from "../lib/chains";
+import NewMilestone from "./NewMilestone";
 import { PageHead } from "../components/shell";
 import { ChainName, Chip, Empty, ExtLink, Icon, Skel } from "../components/ui";
 
@@ -116,10 +120,11 @@ function MilestoneCard({ id, m }: { id: string; m: any }) {
       <h2 className="h3" style={{ fontFamily: "var(--f-display)", fontSize: "var(--t-h3)" }}>{m.title}</h2>
       <p className="muted small">{m.rfpText.replace(/^#.*\n+/, "").trim().split("\n").join(" ")}</p>
       <dl className="kv small">
-        <dt>Pays</dt><dd>{m.grantee}.nidhi-dao.eth on <ChainName chain={dest} /></dd>
+        <dt>Pays</dt><dd>{m.open ? <>the first merged PR's author, as <span className="mono">&lt;github&gt;.nidhi-dao.eth</span>, on </> : <>{m.grantee}.nidhi-dao.eth on </>}<ChainName chain={dest} /></dd>
         <dt>Amount</dt><dd className="mono">{amount(BigInt(m.amountInWei))} WETH, swapped to CCIP-BnM</dd>
         <dt>Rules</dt><dd>merged · {needApprovals} approval{needApprovals === 1 ? "" : "s"} · CI green · touches {(m.requiredPathGlobs ?? []).join(", ")}</dd>
         <dt>Repo</dt><dd><ExtLink href={`https://github.com/${m.repo}`}>{m.repo}</ExtLink></dd>
+        {m.onchain && <><dt>Posted by</dt><dd className="mono">{short(m.approver)} · on-chain</dd></>}
       </dl>
 
       <ol className="tl" style={{ marginTop: 8 }}>
@@ -131,7 +136,7 @@ function MilestoneCard({ id, m }: { id: string; m: any }) {
             <>
               <a className="link" href={p.url} target="_blank" rel="noreferrer">{p.title}</a> by {p.author} · {p.approvals} approval{p.approvals === 1 ? "" : "s"} · CI {p.checks.total === 0 ? "none yet" : p.checks.failed ? `${p.checks.failed} failed` : p.checks.pending ? `${p.checks.pending} running` : "green"}
             </>
-          ) : `open a pull request whose title contains [${id}]`}
+          ) : m.open ? <>open a pull request titled <span className="mono">[{id}] …</span> and add <span className="mono">nidhi-wallet: 0x…</span> to its description</> : `open a pull request whose title contains [${id}]`}
         </Step>
         <Step state={verified ? "done" : merged && checksOk && reviewsOk ? "live" : "todo"} title="Agent verified the work">
           {verified ? <>attested by <span className="mono">{short(c!.auditor)}</span> (ENS auditor role) · <a className="link" href={txUrl(c!.src, c!.tx!)} target="_blank" rel="noreferrer">tx</a></> : merged ? "the agent checks merged PRs within minutes" : "runs when the PR is merged"}
@@ -144,17 +149,52 @@ function MilestoneCard({ id, m }: { id: string; m: any }) {
   );
 }
 
+/** milestones posted on-chain from the app (NidhiBountyBoard events), read live */
+function useBoardMilestones() {
+  const board = (data as any).board;
+  return useQuery({
+    queryKey: ["board-milestones", board?.board],
+    enabled: !!board,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const logs = await contractLogs(11155111, board.board, board.deployBlock);
+      const ev = parseEventLogs({ abi: nidhiBountyBoardAbi as any, logs, strict: false }) as any[];
+      const cancelled = new Set(ev.filter((l) => l.eventName === "BountyCancelled").map((l) => String(l.args.id)));
+      return ev.filter((l) => l.eventName === "BountyPosted" && !cancelled.has(String(l.args.id))).map((l) => {
+        const b = l.args.bounty, sp = l.args.spec;
+        let rules: any = {};
+        try { rules = JSON.parse(sp.rules || "{}"); } catch { rules = {}; }
+        return [`b${l.args.id}`, {
+          title: sp.title, repo: sp.repo, rfpText: sp.body, grantee: sp.grantee, open: !sp.grantee, onchain: true,
+          payTo: chainBySelector(BigInt(b.destChainSelector))?.id, amountInWei: String(b.amountIn),
+          requiredPathGlobs: rules.requiredPathGlobs ?? [], rules: { minApprovals: rules.minApprovals ?? 1 },
+          committed: true, specHash: l.args.specHash, grantId: l.args.grantId, approver: l.args.poster, committedAt: null,
+        }] as [string, any];
+      }).reverse();
+    },
+  });
+}
+
 export default function Milestones() {
-  const ms = Object.entries((data as any).milestones ?? {});
+  const [adding, setAdding] = useState(false);
+  const board = useBoardMilestones();
+  const ms = [...(board.data ?? []), ...Object.entries((data as any).milestones ?? {})];
   const src = chainById((data as any).source?.chainId ?? 11155111);
   return (
     <>
       <PageHead
         title="Milestones"
         sub={<>The DAO commits each milestone and pre-signs its payout. A developer opens a PR tagged with the milestone id. When it is merged, the agent checks the work and pays the grantee on their chain, with no one in between.</>}
-        action={<a className="btn btn--secondary" href="https://github.com/neevmodh/nidhi/actions/workflows/agent.yml" target="_blank" rel="noreferrer"><Icon name="lightning" size="sm" />Agent runs</a>}
+        action={
+          <div className="btn-row">
+            <a className="btn btn--secondary" href="https://github.com/neevmodh/nidhi/actions/workflows/agent.yml" target="_blank" rel="noreferrer"><Icon name="lightning" size="sm" />Agent runs</a>
+            {(data as any).board && <button className="btn btn--primary" onClick={() => setAdding(!adding)}><Icon name={adding ? "x" : "plus"} size="sm" />{adding ? "Close" : "New milestone"}</button>}
+          </div>
+        }
       />
+      {adding && <div className="grid" style={{ marginBottom: 24 }}><NewMilestone onDone={() => { setAdding(false); board.refetch(); }} /></div>}
       {ms.length === 0 ? <Empty title="No milestones yet." /> : <div className="grid">{ms.map(([id, m]) => <MilestoneCard key={id} id={id} m={m} />)}</div>}
+      {board.isLoading && <p className="small muted" style={{ marginTop: 12 }}>Reading on-chain milestones…</p>}
       <div className="card" style={{ marginTop: 24 }}>
         <span className="label">How the agent decides</span>
         <p className="small muted" style={{ marginTop: 8 }}>

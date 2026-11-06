@@ -36,6 +36,11 @@ function targets() {
       add(h.route.final, h.route.finalReceiver);
     }
   }
+  // the milestone board's events (on-chain milestones posted from the app)
+  try {
+    const ms = JSON.parse(fs.readFileSync(path.join(ui, "src", "data", "milestones.json"), "utf8"));
+    if (ms.board?.board) add(11155111, ms.board.board);
+  } catch { /* no milestones file: nothing to add */ }
   return [...t.values()];
 }
 
