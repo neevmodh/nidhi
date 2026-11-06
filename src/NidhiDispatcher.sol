@@ -40,6 +40,7 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
         Status status;
         uint8 outcome; // last AckLib outcome reported by the destination
         uint64 dispatchedAt;
+        uint64 destSelector; // CCIP selector of the destination chain this grant was sent to
         uint128 amount;
         address token;
         address recipient;
@@ -48,10 +49,10 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
 
     /// @notice Fee token for CCIP fees: LINK, or address(0) for native.
     address public immutable feeToken;
-    uint64 public immutable destChainSelector;
 
     address public hook; // set once
-    address public destReceiver; // set once
+    /// @notice destination chain selector => DestinationReceiver there. Add-only: an entry can never be changed.
+    mapping(uint64 destSelector => address receiver) public destReceivers;
     uint32 public destGasLimit = 600_000;
     /// @notice Grants still DISPATCHED after this long can be flagged (CCIP's executor retries for ~8h).
     uint64 public constant STUCK_AFTER = 6 hours;
@@ -59,7 +60,7 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     mapping(bytes32 grantId => Grant) internal _grants;
 
     event HookSet(address hook);
-    event DestReceiverSet(address receiver);
+    event DestinationAdded(uint64 indexed destSelector, address receiver);
     event DestGasLimitSet(uint32 gasLimit);
     event GrantDispatched(
         bytes32 indexed grantId,
@@ -75,7 +76,7 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     error OnlyHook();
     error AlreadySet();
     error ZeroAddress();
-    error NotConfigured();
+    error NotConfigured(uint64 destSelector);
     error WrongDestination();
     error GrantExists(bytes32 grantId);
     error InsufficientTokens(uint256 have, uint256 need);
@@ -85,12 +86,8 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     error MessageIdMismatch(bytes32 stored, bytes32 received);
     error NotStuck(bytes32 grantId);
 
-    constructor(address router_, address feeToken_, uint64 destChainSelector_, address owner_)
-        CCIPReceiver(router_)
-        Ownable(owner_)
-    {
+    constructor(address router_, address feeToken_, address owner_) CCIPReceiver(router_) Ownable(owner_) {
         feeToken = feeToken_;
-        destChainSelector = destChainSelector_;
     }
 
     receive() external payable {} // native fee reserve
@@ -104,11 +101,12 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
         emit HookSet(hook_);
     }
 
-    function setDestReceiver(address receiver_) external onlyOwner {
-        if (destReceiver != address(0)) revert AlreadySet();
-        if (receiver_ == address(0)) revert ZeroAddress();
-        destReceiver = receiver_;
-        emit DestReceiverSet(receiver_);
+    /// @notice Register the DestinationReceiver for a destination chain. Add-only (no overwrite).
+    function addDestination(uint64 destSelector, address receiver_) external onlyOwner {
+        if (destReceivers[destSelector] != address(0)) revert AlreadySet();
+        if (receiver_ == address(0) || destSelector == 0) revert ZeroAddress();
+        destReceivers[destSelector] = receiver_;
+        emit DestinationAdded(destSelector, receiver_);
     }
 
     function setDestGasLimit(uint32 gasLimit_) external onlyOwner {
@@ -121,8 +119,9 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
     /// @inheritdoc INidhiDispatcher
     function dispatch(Mandate calldata m, uint256 amount) external nonReentrant returns (bytes32 messageId) {
         if (msg.sender != hook) revert OnlyHook();
-        if (destReceiver == address(0)) revert NotConfigured();
-        if (m.destChainSelector != destChainSelector || m.destReceiver != destReceiver) revert WrongDestination();
+        address receiver = destReceivers[m.destChainSelector];
+        if (receiver == address(0)) revert NotConfigured(m.destChainSelector);
+        if (m.destReceiver != receiver) revert WrongDestination();
 
         Grant storage g = _grants[m.grantId];
         if (g.status != Status.NONE) revert GrantExists(m.grantId);
@@ -130,13 +129,14 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
         uint256 bal = IERC20(m.tokenOut).balanceOf(address(this));
         if (bal < amount) revert InsufficientTokens(bal, amount);
 
-        Client.EVM2AnyMessage memory message = _buildMessage(m, amount);
+        Client.EVM2AnyMessage memory message = _buildMessage(m, amount, receiver);
         IRouterClient router = IRouterClient(getRouter());
-        uint256 fee = router.getFee(destChainSelector, message);
+        uint256 fee = router.getFee(m.destChainSelector, message);
 
         // Effects before interactions.
         g.status = Status.DISPATCHED;
         g.dispatchedAt = uint64(block.timestamp);
+        g.destSelector = m.destChainSelector;
         g.amount = SafeCast.toUint128(amount);
         g.token = m.tokenOut;
         g.recipient = m.recipient;
@@ -144,12 +144,12 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
         IERC20(m.tokenOut).forceApprove(address(router), amount);
         if (feeToken == address(0)) {
             if (address(this).balance < fee) revert InsufficientFee(address(this).balance, fee);
-            messageId = router.ccipSend{value: fee}(destChainSelector, message);
+            messageId = router.ccipSend{value: fee}(m.destChainSelector, message);
         } else {
             uint256 feeBal = IERC20(feeToken).balanceOf(address(this));
             if (feeBal < fee) revert InsufficientFee(feeBal, fee);
             IERC20(feeToken).forceApprove(address(router), fee);
-            messageId = router.ccipSend(destChainSelector, message);
+            messageId = router.ccipSend(m.destChainSelector, message);
             IERC20(feeToken).forceApprove(address(router), 0);
         }
         IERC20(m.tokenOut).forceApprove(address(router), 0);
@@ -161,11 +161,15 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
         emit GrantDispatched(m.grantId, messageId, m.tokenOut, amount, m.recipient, fee);
     }
 
-    function _buildMessage(Mandate calldata m, uint256 amount) private view returns (Client.EVM2AnyMessage memory) {
+    function _buildMessage(Mandate calldata m, uint256 amount, address receiver)
+        private
+        view
+        returns (Client.EVM2AnyMessage memory)
+    {
         Client.EVMTokenAmount[] memory tokens = new Client.EVMTokenAmount[](1);
         tokens[0] = Client.EVMTokenAmount({token: m.tokenOut, amount: amount});
         return Client.EVM2AnyMessage({
-            receiver: abi.encode(destReceiver),
+            receiver: abi.encode(receiver),
             data: AckLib.encodeGrant(m.grantId, m.recipient, amount),
             tokenAmounts: tokens,
             feeToken: feeToken,
@@ -177,14 +181,14 @@ contract NidhiDispatcher is INidhiDispatcher, CCIPReceiver, Ownable2Step, Reentr
 
     function _ccipReceive(Client.Any2EVMMessage memory message) internal override {
         address sender = abi.decode(message.sender, (address));
-        if (message.sourceChainSelector != destChainSelector || sender != destReceiver || sender == address(0)) {
-            revert UnknownSource(message.sourceChainSelector, sender);
-        }
+        address expected = destReceivers[message.sourceChainSelector];
+        if (expected == address(0) || sender != expected) revert UnknownSource(message.sourceChainSelector, sender);
         if (message.destTokenAmounts.length != 0) revert InvalidAck(bytes32(0));
 
         (bytes32 grantId, bytes32 sourceMessageId, uint256 amount, uint8 outcome) = AckLib.decodeAck(message.data);
         Grant storage g = _grants[grantId];
-        if (amount != g.amount) revert InvalidAck(grantId);
+        // An ACK is only valid from the chain this grant was actually sent to.
+        if (amount != g.amount || g.destSelector != message.sourceChainSelector) revert InvalidAck(grantId);
 
         if (g.messageId == bytes32(0)) g.messageId = sourceMessageId;
         else if (g.messageId != sourceMessageId) revert MessageIdMismatch(g.messageId, sourceMessageId);

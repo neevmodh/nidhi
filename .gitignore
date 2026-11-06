@@ -3,3 +3,10 @@ cache/
 broadcast/
 node_modules/
 .env
+
+# installed agent skills (restore with: npx skills experimental_install)
+.agents/
+.claude/skills/
+
+# ui build output
+ui/dist/

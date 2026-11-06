@@ -110,11 +110,11 @@ contract LiveScenarios is Demo {
 
     // ---------------------------------------------------------------- helpers
 
-    function _fresh() internal view returns (Mandate memory m, Attestation memory a) {
+    function _fresh() internal returns (Mandate memory m, Attestation memory a) {
         return _freshSalted(99);
     }
 
-    function _freshSalted(uint256 salt) internal view returns (Mandate memory m, Attestation memory a) {
+    function _freshSalted(uint256 salt) internal returns (Mandate memory m, Attestation memory a) {
         bytes32 grantId = keccak256(abi.encode("nidhi-scenario", block.timestamp, salt));
         a = Attestation(
             grantId,

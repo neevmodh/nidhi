@@ -392,9 +392,11 @@ contract NidhiFlowTest is NidhiBase {
         vm.expectRevert(NidhiDispatcher.AlreadySet.selector);
         dispatcher.setHook(address(1));
         vm.expectRevert(NidhiDispatcher.AlreadySet.selector);
-        dispatcher.setDestReceiver(address(1));
+        dispatcher.addDestination(chainSelector, address(1)); // routes are add-only
         vm.expectRevert(DestinationReceiver.AlreadySet.selector);
-        receiver.setSourceDispatcher(address(1));
+        receiver.addSource(chainSelector, address(1));
+        vm.expectRevert(DestinationReceiver.AlreadySet.selector);
+        receiver.allowToken(address(bnm));
         vm.stopPrank();
     }
 

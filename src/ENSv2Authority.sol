@@ -53,18 +53,28 @@ contract ENSv2Authority is IGrantAuthority {
     bytes4 internal constant ADDR_COIN_SELECTOR = 0xf1cb7e06;
 
     IENSv2Registry public immutable registry;
-    /// @notice ENSIP-11 coin type of the payout chain (e.g. 0x80000000 | 84532 for Base Sepolia).
-    uint256 public immutable granteeCoinType;
+    /// @notice destination CCIP selector => ENSIP-11 coin type (0x80000000 | chainId) of the payout chain.
+    mapping(uint64 destSelector => uint256 coinType) public coinTypeOf;
     /// @notice The DAO's label under the registry, e.g. "nidhi-dao" for nidhi-dao.eth.
     string public label;
 
     error BadConfig();
 
-    constructor(IENSv2Registry registry_, string memory label_, uint256 granteeCoinType_) {
-        if (address(registry_) == address(0) || bytes(label_).length == 0) revert BadConfig();
+    constructor(
+        IENSv2Registry registry_,
+        string memory label_,
+        uint64[] memory selectors_,
+        uint256[] memory coinTypes_
+    ) {
+        if (address(registry_) == address(0) || bytes(label_).length == 0 || selectors_.length != coinTypes_.length) {
+            revert BadConfig();
+        }
         registry = registry_;
         label = label_;
-        granteeCoinType = granteeCoinType_;
+        for (uint256 i; i < selectors_.length; ++i) {
+            if (selectors_[i] == 0 || coinTypes_[i] == 0) revert BadConfig();
+            coinTypeOf[selectors_[i]] = coinTypes_[i];
+        }
     }
 
     /// @notice The resolver the DAO's name points to right now (address(0) if the name is unset or expired).
@@ -92,7 +102,9 @@ contract ENSv2Authority is IGrantAuthority {
     /// @notice Resolve the grantee subname `<granteeLabel>.<label>.eth` to its payout-chain address:
     ///         registry.getSubregistry(dao) -> subregistry.getResolver(grantee) -> resolver.resolve(name, addr(node, coin)).
     ///         Any missing link (no subregistry, expired subname, no record, malformed record) returns address(0).
-    function resolveGrantee(string calldata granteeLabel) external view returns (address) {
+    function resolveGrantee(string calldata granteeLabel, uint64 destSelector) external view returns (address) {
+        uint256 coinType = coinTypeOf[destSelector];
+        if (coinType == 0) return address(0); // unknown destination chain: fail closed
         if (bytes(granteeLabel).length == 0 || bytes(granteeLabel).length > 63) return address(0);
         address sub = registry.getSubregistry(label);
         if (sub == address(0)) return address(0);
@@ -105,7 +117,7 @@ contract ENSv2Authority is IGrantAuthority {
         if (resolver == address(0)) return address(0);
         bytes memory name = granteeName(granteeLabel);
         try IExtendedResolver(resolver)
-            .resolve(name, abi.encodeWithSelector(ADDR_COIN_SELECTOR, bytes32(0), granteeCoinType)) returns (
+            .resolve(name, abi.encodeWithSelector(ADDR_COIN_SELECTOR, bytes32(0), coinType)) returns (
             bytes memory out
         ) {
             if (out.length < 64) return address(0);

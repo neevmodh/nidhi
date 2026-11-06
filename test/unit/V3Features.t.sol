@@ -156,19 +156,20 @@ contract V3FeaturesTest is NidhiBase {
     }
 
     function test_authorityResolveEdges() public {
-        assertEq(authority.resolveGrantee(GRANTEE_LABEL), recipient);
-        assertEq(authority.resolveGrantee("nobody"), address(0));
-        assertEq(authority.resolveGrantee(""), address(0));
+        assertEq(authority.resolveGrantee(GRANTEE_LABEL, chainSelector), recipient);
+        assertEq(authority.resolveGrantee("nobody", chainSelector), address(0));
+        assertEq(authority.resolveGrantee("", chainSelector), address(0));
         assertEq(
-            authority.resolveGrantee("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            authority.resolveGrantee("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", chainSelector),
             address(0)
         );
         // DAO without a subregistry resolves nothing
         MockENSv2Registry bare = new MockENSv2Registry();
         bare.set("other-dao", address(eac), uint64(block.timestamp + 1 days));
-        ENSv2Authority a2 = new ENSv2Authority(IENSv2Registry(address(bare)), "other-dao", COIN_TYPE);
-        assertEq(a2.resolveGrantee(GRANTEE_LABEL), address(0));
-        assertEq(authority.resourceOf(authority.GUARDIAN()), GUARDIAN_RES);
+        ENSv2Authority a2 = _authority(bare, "other-dao");
+        assertEq(a2.resolveGrantee(GRANTEE_LABEL, chainSelector), address(0));
+        assertEq(authority.resolveGrantee(GRANTEE_LABEL, 12345), address(0), "unknown destination chain fails closed");
+        assertEq(ensAuthority.resourceOf(authority.GUARDIAN()), GUARDIAN_RES);
     }
 
     // =================================================================== A4 batch payouts
@@ -311,35 +312,35 @@ contract ResolveGranteeFailClosedTest is NidhiBase {
         MockENSv2Registry r = new MockENSv2Registry();
         r.set("dao", address(eac), uint64(block.timestamp + 1 days));
         r.setSubregistry("dao", sub);
-        return new ENSv2Authority(IENSv2Registry(address(r)), "dao", COIN_TYPE);
+        return _authority(r, "dao");
     }
 
     function test_revertingSubregistry() public {
-        assertEq(_authorityWithSub(address(new RevertingSubregistry())).resolveGrantee("alice"), address(0));
+        assertEq(_authorityWithSub(address(new RevertingSubregistry())).resolveGrantee("alice", chainSelector), address(0));
     }
 
     function test_subregistryWithoutResolver() public {
-        assertEq(_authorityWithSub(address(new FixedSubregistry(address(0)))).resolveGrantee("alice"), address(0));
+        assertEq(_authorityWithSub(address(new FixedSubregistry(address(0)))).resolveGrantee("alice", chainSelector), address(0));
     }
 
     function test_revertingResolver() public {
         address sub = address(new FixedSubregistry(address(new RevertingResolver())));
-        assertEq(_authorityWithSub(sub).resolveGrantee("alice"), address(0));
+        assertEq(_authorityWithSub(sub).resolveGrantee("alice", chainSelector), address(0));
     }
 
     function test_shortReturnResolver() public {
         address sub = address(new FixedSubregistry(address(new ShortReturnResolver())));
-        assertEq(_authorityWithSub(sub).resolveGrantee("alice"), address(0));
+        assertEq(_authorityWithSub(sub).resolveGrantee("alice", chainSelector), address(0));
     }
 
     function test_wrongLengthAddressRecord() public {
         address sub = address(new FixedSubregistry(address(new WrongLengthResolver())));
-        assertEq(_authorityWithSub(sub).resolveGrantee("alice"), address(0));
+        assertEq(_authorityWithSub(sub).resolveGrantee("alice", chainSelector), address(0));
     }
 
     function test_granteeNameEncoding() public view {
         assertEq(
-            authority.granteeName("alice"),
+            ensAuthority.granteeName("alice"),
             abi.encodePacked(uint8(5), "alice", uint8(9), "nidhi-dao", uint8(3), "eth", uint8(0))
         );
     }

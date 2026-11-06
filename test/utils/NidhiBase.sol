@@ -19,10 +19,12 @@ import {BurnMintERC677Helper} from "@chainlink/local/src/ccip/BurnMintERC677Help
 import {IRouterClient} from "@chainlink/contracts-ccip/contracts/interfaces/IRouterClient.sol";
 
 import {NidhiHook} from "../../src/NidhiHook.sol";
+import {V4Quoter} from "@uniswap/v4-periphery/src/lens/V4Quoter.sol";
 import {NidhiSwapRouter} from "../../src/NidhiSwapRouter.sol";
 import {NidhiDispatcher} from "../../src/NidhiDispatcher.sol";
 import {DestinationReceiver} from "../../src/DestinationReceiver.sol";
 import {ENSv2Authority} from "../../src/ENSv2Authority.sol";
+import {IGrantAuthority} from "../../src/interfaces/IGrantAuthority.sol";
 import {Mandate, Attestation} from "../../src/libraries/Mandate.sol";
 import {MockEAC} from "../mocks/MockEAC.sol";
 import {MockENSv2Registry, MockGranteeRegistry} from "../mocks/MockENSv2Registry.sol";
@@ -62,11 +64,13 @@ abstract contract NidhiBase is Test, Deployers {
     MockENSv2Registry internal ensRegistry;
     MockGranteeRegistry internal grantees;
     address internal guardian = makeAddr("guardian");
-    ENSv2Authority internal authority;
+    IGrantAuthority internal authority; // ENSv2Authority by default; tests may swap in RoleAuthority
+    ENSv2Authority internal ensAuthority; // always the ENS-backed one (resolver/coin-type introspection)
     NidhiSwapRouter internal nidhiRouter;
     NidhiDispatcher internal dispatcher;
     DestinationReceiver internal receiver;
     NidhiHook internal hook;
+    V4Quoter internal quoter;
 
     bool internal zeroForOne; // direction that sells WETH for BnM
     uint256 internal grantNonce;
@@ -92,7 +96,8 @@ abstract contract NidhiBase is Test, Deployers {
         eac = new MockEAC(); // the DAO's PermissionedResolver
         ensRegistry = new MockENSv2Registry();
         ensRegistry.set(DAO_LABEL, address(eac), uint64(block.timestamp + 365 days));
-        authority = new ENSv2Authority(IENSv2Registry(address(ensRegistry)), DAO_LABEL, COIN_TYPE);
+        ensAuthority = _authority(ensRegistry, DAO_LABEL);
+        authority = _deployAuthority();
         eac.grant(APPROVER_RES, ROLE_SET_TEXT, approver);
         eac.grant(AUDITOR_RES, ROLE_SET_TEXT, auditor);
         eac.grant(GUARDIAN_RES, ROLE_SET_TEXT, guardian);
@@ -103,8 +108,9 @@ abstract contract NidhiBase is Test, Deployers {
 
         // --- Nidhi
         nidhiRouter = new NidhiSwapRouter(manager);
-        dispatcher = new NidhiDispatcher(address(ccipRouter), link, chainSelector, daoOwner);
-        receiver = new DestinationReceiver(address(ccipRouter), chainSelector, address(bnm), link, daoOwner);
+        quoter = new V4Quoter(manager);
+        dispatcher = new NidhiDispatcher(address(ccipRouter), link, daoOwner);
+        receiver = new DestinationReceiver(address(ccipRouter), link, daoOwner);
 
         address hookAddr = address(
             uint160(Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG)
@@ -112,15 +118,16 @@ abstract contract NidhiBase is Test, Deployers {
         );
         deployCodeTo(
             "NidhiHook.sol:NidhiHook",
-            abi.encode(manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP),
+            abi.encode(manager, authority, dispatcher, address(nidhiRouter), daoOwner, DAILY_CAP, address(quoter), _guard()),
             hookAddr
         );
         hook = NidhiHook(hookAddr);
 
         vm.startPrank(daoOwner);
         dispatcher.setHook(address(hook));
-        dispatcher.setDestReceiver(address(receiver));
-        receiver.setSourceDispatcher(address(dispatcher));
+        dispatcher.addDestination(chainSelector, address(receiver));
+        receiver.addSource(chainSelector, address(dispatcher));
+        receiver.allowToken(address(bnm));
         vm.stopPrank();
 
         // --- pool: WETH / CCIP-BnM, liquidity from an LP (this contract)
@@ -152,6 +159,29 @@ abstract contract NidhiBase is Test, Deployers {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /// ENSv2Authority wired for the simulator's single chain selector (Base Sepolia coin type).
+    function _authority(MockENSv2Registry reg, string memory dao) internal returns (ENSv2Authority) {
+        uint64[] memory sels = new uint64[](1);
+        uint256[] memory coins = new uint256[](1);
+        sels[0] = chainSelector;
+        coins[0] = COIN_TYPE;
+        return new ENSv2Authority(IENSv2Registry(address(reg)), dao, sels, coins);
+    }
+
+    /// Override to run the whole suite against a different IGrantAuthority.
+    function _deployAuthority() internal virtual returns (IGrantAuthority) {
+        return IGrantAuthority(address(ensAuthority));
+    }
+
+    /// Override to enable the reference-price guard.
+    function _guard() internal virtual returns (NidhiHook.ReferenceGuard memory) {
+        return _noGuard();
+    }
+
+    function _noGuard() internal pure returns (NidhiHook.ReferenceGuard memory g) {
+        return g; // stateView == address(0): reference-price guard disabled
+    }
 
     function _newGrantId() internal returns (bytes32) {
         return keccak256(abi.encode("grant", ++grantNonce));

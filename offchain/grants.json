@@ -33,6 +33,29 @@
         "foundry.toml",
         "lib/**"
       ]
+    },
+    "nidhi-004": {
+      "repo": "OpenZeppelin/uniswap-hooks",
+      "pr": 218,
+      "rfp": "rfp/nidhi-004.md",
+      "grantee": "alice",
+      "amountInWei": "200000000000000",
+      "requiredPathGlobs": [
+        "src/**",
+        "test/**"
+      ],
+      "note": "Negative example: approved and merged, but CI (CodeSpell, Coverage) failed on the merged head -> rejected."
+    },
+    "nidhi-005": {
+      "repo": "Uniswap/v4-periphery",
+      "pr": 609,
+      "rfp": "rfp/nidhi-005.md",
+      "grantee": "alice",
+      "amountInWei": "200000000000000",
+      "requiredPathGlobs": [
+        "src/**",
+        "test/**"
+      ]
     }
   }
 }

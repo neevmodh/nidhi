@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "design-taste-frontend": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "23b3930015c478034b222e1a015da03a962c8ab48aee9fb4f3f69d977034feaa"
+    },
+    "swap-integration": {
+      "source": "uniswap/uniswap-ai",
+      "sourceType": "github",
+      "skillPath": "packages/plugins/uniswap-trading/skills/swap-integration/SKILL.md",
+      "computedHash": "ad8984fe66881863214b65fa6b8b51ad29d736f3ee06779be25389665226ca1b"
+    }
+  }
+}

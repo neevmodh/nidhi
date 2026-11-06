@@ -1,0 +1,307 @@
+{
+  "sourceChains": [
+    1,
+    10,
+    130,
+    137,
+    143,
+    999,
+    8453,
+    42161,
+    43114,
+    57073
+  ],
+  "chains": {
+    "1": {
+      "chainId": 1,
+      "key": "ethereum",
+      "name": "Ethereum",
+      "native": "ETH",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        10,
+        130,
+        137,
+        143,
+        8453,
+        42161,
+        43114
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "10": {
+      "chainId": 10,
+      "key": "optimism",
+      "name": "Optimism",
+      "native": "ETH",
+      "source": true,
+      "cursed": true,
+      "payoutLanes": [
+        1,
+        130,
+        137,
+        8453,
+        42161,
+        43114
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "56": {
+      "chainId": 56,
+      "key": "bnb",
+      "name": "BNB Chain",
+      "native": "BNB",
+      "source": false,
+      "cursed": false,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "130": {
+      "chainId": 130,
+      "key": "unichain",
+      "name": "Unichain",
+      "native": "ETH",
+      "source": true,
+      "cursed": true,
+      "payoutLanes": [
+        1,
+        10,
+        137,
+        8453,
+        42161,
+        43114
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "137": {
+      "chainId": 137,
+      "key": "polygon",
+      "name": "Polygon",
+      "native": "POL",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        8453,
+        42161,
+        43114
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "143": {
+      "chainId": 143,
+      "key": "monad",
+      "name": "Monad",
+      "native": "MON",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        1,
+        42161
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "196": {
+      "chainId": 196,
+      "key": "xlayer",
+      "name": "X Layer",
+      "native": "OKB",
+      "source": false,
+      "cursed": true,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "480": {
+      "chainId": 480,
+      "key": "worldchain",
+      "name": "World Chain",
+      "native": "ETH",
+      "source": false,
+      "cursed": true,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "999": {
+      "chainId": 999,
+      "key": "hyperevm",
+      "name": "HyperEVM",
+      "native": "HYPE",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        42161
+      ],
+      "excludedBecause": null,
+      "tradingApi": false
+    },
+    "1868": {
+      "chainId": 1868,
+      "key": "soneium",
+      "name": "Soneium",
+      "native": "ETH",
+      "source": false,
+      "cursed": true,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "4217": {
+      "chainId": 4217,
+      "key": "tempo",
+      "name": "Tempo",
+      "native": "USD",
+      "source": false,
+      "cursed": false,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "4326": {
+      "chainId": 4326,
+      "key": "megaeth",
+      "name": "MegaETH",
+      "native": "ETH",
+      "source": false,
+      "cursed": false,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "4663": {
+      "chainId": 4663,
+      "key": "robinhood",
+      "name": "Robinhood Chain",
+      "native": "ETH",
+      "source": false,
+      "cursed": false,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "5042": {
+      "chainId": 5042,
+      "key": "arc",
+      "name": "Arc",
+      "native": "USDC",
+      "source": false,
+      "cursed": false,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "8453": {
+      "chainId": 8453,
+      "key": "base",
+      "name": "Base",
+      "native": "ETH",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        137,
+        42161,
+        43114
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "42161": {
+      "chainId": 42161,
+      "key": "arbitrum",
+      "name": "Arbitrum",
+      "native": "ETH",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        137,
+        143,
+        999,
+        8453,
+        43114,
+        57073
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "42220": {
+      "chainId": 42220,
+      "key": "celo",
+      "name": "Celo",
+      "native": "CELO",
+      "source": false,
+      "cursed": true,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "43114": {
+      "chainId": 43114,
+      "key": "avalanche",
+      "name": "Avalanche",
+      "native": "AVAX",
+      "source": true,
+      "cursed": false,
+      "payoutLanes": [
+        1,
+        10,
+        130,
+        137,
+        8453,
+        42161
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "57073": {
+      "chainId": 57073,
+      "key": "ink",
+      "name": "Ink",
+      "native": "ETH",
+      "source": true,
+      "cursed": true,
+      "payoutLanes": [
+        42161
+      ],
+      "excludedBecause": null,
+      "tradingApi": true
+    },
+    "59144": {
+      "chainId": 59144,
+      "key": "linea",
+      "name": "Linea",
+      "native": "ETH",
+      "source": false,
+      "cursed": false,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    },
+    "7777777": {
+      "chainId": 7777777,
+      "key": "zora",
+      "name": "Zora",
+      "native": "ETH",
+      "source": false,
+      "cursed": true,
+      "payoutLanes": [],
+      "excludedBecause": "no CCIP-supported USDC (cannot pay a USDC grant)",
+      "tradingApi": true
+    }
+  }
+}
