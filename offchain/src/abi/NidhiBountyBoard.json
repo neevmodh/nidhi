@@ -1,0 +1,618 @@
+[
+ {
+  "type": "constructor",
+  "inputs": [
+   {
+    "name": "hook_",
+    "type": "address",
+    "internalType": "contract IMandateDigest"
+   },
+   {
+    "name": "authority_",
+    "type": "address",
+    "internalType": "contract IGrantAuthority"
+   }
+  ],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "authority",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IGrantAuthority"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "cancel",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "count",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "getBounty",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "",
+    "type": "tuple",
+    "internalType": "struct NidhiBountyBoard.Bounty",
+    "components": [
+     {
+      "name": "poster",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "cancelled",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "grantId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "specHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "granteeLabelHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "executor",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenIn",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenOut",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "amountIn",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "minOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "maxOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "destChainSelector",
+      "type": "uint64",
+      "internalType": "uint64"
+     },
+     {
+      "name": "destReceiver",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "poolId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "deadline",
+      "type": "uint64",
+      "internalType": "uint64"
+     }
+    ]
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "hook",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IMandateDigest"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "isValidSignature",
+  "inputs": [
+   {
+    "name": "digest",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   },
+   {
+    "name": "signature",
+    "type": "bytes",
+    "internalType": "bytes"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "",
+    "type": "bytes4",
+    "internalType": "bytes4"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "matches",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "m",
+    "type": "tuple",
+    "internalType": "struct Mandate",
+    "components": [
+     {
+      "name": "grantId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "executor",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "recipient",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenIn",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenOut",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "amountIn",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "minOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "maxOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "destChainSelector",
+      "type": "uint64",
+      "internalType": "uint64"
+     },
+     {
+      "name": "destReceiver",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "evidenceHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "deadline",
+      "type": "uint64",
+      "internalType": "uint64"
+     },
+     {
+      "name": "poolId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "recipientLabelHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     }
+    ]
+   }
+  ],
+  "outputs": [
+   {
+    "name": "",
+    "type": "bool",
+    "internalType": "bool"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "post",
+  "inputs": [
+   {
+    "name": "b",
+    "type": "tuple",
+    "internalType": "struct NidhiBountyBoard.Bounty",
+    "components": [
+     {
+      "name": "poster",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "cancelled",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "grantId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "specHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "granteeLabelHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "executor",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenIn",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenOut",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "amountIn",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "minOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "maxOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "destChainSelector",
+      "type": "uint64",
+      "internalType": "uint64"
+     },
+     {
+      "name": "destReceiver",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "poolId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "deadline",
+      "type": "uint64",
+      "internalType": "uint64"
+     }
+    ]
+   },
+   {
+    "name": "spec",
+    "type": "tuple",
+    "internalType": "struct NidhiBountyBoard.Spec",
+    "components": [
+     {
+      "name": "title",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "repo",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "body",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "rules",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "grantee",
+      "type": "string",
+      "internalType": "string"
+     }
+    ]
+   }
+  ],
+  "outputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "event",
+  "name": "BountyCancelled",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "indexed": true,
+    "internalType": "uint256"
+   },
+   {
+    "name": "by",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "BountyPosted",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "indexed": true,
+    "internalType": "uint256"
+   },
+   {
+    "name": "poster",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "grantId",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "specHash",
+    "type": "bytes32",
+    "indexed": false,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "spec",
+    "type": "tuple",
+    "indexed": false,
+    "internalType": "struct NidhiBountyBoard.Spec",
+    "components": [
+     {
+      "name": "title",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "repo",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "body",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "rules",
+      "type": "string",
+      "internalType": "string"
+     },
+     {
+      "name": "grantee",
+      "type": "string",
+      "internalType": "string"
+     }
+    ]
+   },
+   {
+    "name": "bounty",
+    "type": "tuple",
+    "indexed": false,
+    "internalType": "struct NidhiBountyBoard.Bounty",
+    "components": [
+     {
+      "name": "poster",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "cancelled",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "grantId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "specHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "granteeLabelHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "executor",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenIn",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "tokenOut",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "amountIn",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "minOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "maxOut",
+      "type": "uint128",
+      "internalType": "uint128"
+     },
+     {
+      "name": "destChainSelector",
+      "type": "uint64",
+      "internalType": "uint64"
+     },
+     {
+      "name": "destReceiver",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "poolId",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "deadline",
+      "type": "uint64",
+      "internalType": "uint64"
+     }
+    ]
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "error",
+  "name": "BadBounty",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "NotApprover",
+  "inputs": [
+   {
+    "name": "account",
+    "type": "address",
+    "internalType": "address"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "NotPosterOrApprover",
+  "inputs": [
+   {
+    "name": "account",
+    "type": "address",
+    "internalType": "address"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "UnknownBounty",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ]
+ }
+]

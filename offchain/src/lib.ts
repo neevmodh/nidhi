@@ -87,11 +87,13 @@ export interface Evidence {
 }
 
 /** The most recent merged PR whose title carries the milestone tag, e.g. "[m1] Add the agent guide". */
-export async function findMilestonePr(repo: string, id: string): Promise<{ number: number; title: string; mergedAt: string } | null> {
+export async function findMilestonePr(repo: string, id: string): Promise<{ number: number; title: string; mergedAt: string; author: string; body: string } | null> {
   const prs = await gh<any[]>(`/repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=50`);
   const tag = `[${id.toLowerCase()}]`;
-  const hit = prs.find((p) => p.merged_at && String(p.title).toLowerCase().includes(tag));
-  return hit ? { number: hit.number, title: hit.title, mergedAt: hit.merged_at } : null;
+  // first come, first served: of the merged PRs carrying the tag, the one merged earliest wins
+  const hits = prs.filter((p) => p.merged_at && String(p.title).toLowerCase().includes(tag)).sort((a, b) => Date.parse(a.merged_at) - Date.parse(b.merged_at));
+  const hit = hits[0];
+  return hit ? { number: hit.number, title: hit.title, mergedAt: hit.merged_at, author: String(hit.user?.login ?? ""), body: String(hit.body ?? "") } : null;
 }
 
 export async function fetchEvidence(repo: string, pr: number): Promise<{ evidence: Evidence; diff: string }> {
