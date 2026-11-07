@@ -42,8 +42,15 @@ function ChainSwitch() {
 
 export function WalletButton() {
   const { address, isConnected } = useAccount();
-  const { connect, connectors, isPending } = useConnect();
+  const { connect, connectors, isPending, error, reset } = useConnect();
   const { disconnect } = useDisconnect();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const off = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("click", off);
+    return () => document.removeEventListener("click", off);
+  }, []);
   if (isConnected) {
     return (
       <button className="btn btn--secondary" onClick={() => disconnect()} title="Disconnect">
@@ -52,12 +59,32 @@ export function WalletButton() {
       </button>
     );
   }
-  const inj = connectors[0];
+  // wallets the browser announced (EIP-6963), e.g. MetaMask and Brave Wallet; the generic "injected" one is the fallback
+  const named = connectors.filter((c) => c.id !== "injected");
+  const metamask = named.find((c) => c.id === "io.metamask" || /metamask/i.test(c.name));
+  const go = (c: (typeof connectors)[number]) => { reset(); setOpen(false); connect({ connector: c }); };
+  const click = () => {
+    if (metamask) return go(metamask);
+    if (named.length > 1) return setOpen(!open);
+    const c = named[0] ?? connectors[0];
+    if (c) go(c);
+  };
+  const msg = error ? (/rejected|denied/i.test(error.message) ? "Request rejected in the wallet" : /provider|not found|no ethereum/i.test(error.message) ? "No wallet found: install or unlock MetaMask" : error.message.split("\n")[0].slice(0, 90)) : null;
   return (
-    <button className="btn btn--secondary" disabled={!inj || isPending} onClick={() => inj && connect({ connector: inj })}>
-      <Icon name="wallet" size="sm" />
-      {isPending ? "Connecting" : "Connect wallet"}
-    </button>
+    <div className="chainsw" ref={ref}>
+      <button className="btn btn--secondary" disabled={isPending || connectors.length === 0} onClick={click} title={msg ?? undefined}>
+        <Icon name="wallet" size="sm" />
+        {isPending ? "Open your wallet…" : "Connect wallet"}
+      </button>
+      {open && (
+        <ul className="chainsw__menu" role="listbox" style={{ left: "auto", right: 0 }}>
+          {named.map((c) => (
+            <li key={c.uid}><button onClick={() => go(c)}><span>{c.name}</span></button></li>
+          ))}
+        </ul>
+      )}
+      {msg && <p className="hint hint--bad" style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", whiteSpace: "nowrap", background: "var(--g-raise)", padding: "4px 10px", borderRadius: 8, boxShadow: "var(--shadow-sm)" }}>{msg}</p>}
+    </div>
   );
 }
 
